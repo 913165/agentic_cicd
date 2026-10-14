@@ -1,0 +1,42 @@
+[ {
+  "name" : "payment-app",
+  "jenkinsJob" : "payment-app",
+  "description" : "Payment Application",
+  "healthUrl" : "http://159.89.243.109/actuator/prometheus",
+  "cluster" : "payment-app-cluster",
+  "namespace" : "payment-app",
+  "jobType" : "jenkins",
+  "exposure" : "external",
+  "phase" : "deploy"
+}, {
+  "name" : "order-app",
+  "jenkinsJob" : "order-api-deployment",
+  "description" : "Order Application",
+  "healthUrl" : "http://139.59.49.134/actuator/prometheus",
+  "jobType" : "jenkins",
+  "exposure" : "external",
+  "phase" : "deploy"
+}, {
+  "name" : "paynent-job-v2",
+  "jenkinsJob" : "common-deploy-job",
+  "healthUrl" : "http://159.89.243.109/actuator/prometheus",
+  "cluster" : "payment-app-cluster",
+  "namespace" : "payment-app",
+  "jobType" : "jenkins",
+  "exposure" : "external",
+  "containerPort" : 8080,
+  "servicePort" : 80,
+  "jenkinsApplication" : "payment-app",
+  "phase" : "deploy"
+}, {
+  "name" : "payment-app-build",
+  "jenkinsJob" : "common-build-job",
+  "jobType" : "jenkins",
+  "exposure" : "external",
+  "jenkinsApplication" : "payment-app",
+  "phase" : "build",
+  "imageVersion" : "1.0.11",
+  "lastExecutedAt" : "2026-10-14T22:16:52.935097800Z",
+  "lastStatus" : "SUCCESS",
+  "lastDurationSec" : 15
+} ]

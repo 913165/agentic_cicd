@@ -1,0 +1,4051 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="_csrf" th:if="${_csrf}" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:if="${_csrf}" th:content="${_csrf.headerName}">
+    <title>Deploy Agent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+    <style>
+        :root, [data-theme="dark"] {
+            --bg: #0b0d17;
+            --bg-subtle: #121526;
+            --surface: #1a1d2e;
+            --surface-2: #151828;
+            --editor: #121526;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-strong: rgba(255, 255, 255, 0.14);
+            --tab-bar: #151828;
+            --tab-active: #1a1d2e;
+            --text: #c8cdd8;
+            --text-strong: #f0f2f8;
+            --muted: #8b93a7;
+            --accent: #7c5cff;
+            --accent-hover: #6d5efc;
+            --accent-soft: rgba(124, 92, 255, 0.18);
+            --accent-text: #ffffff;
+            --user: rgba(124, 92, 255, 0.22);
+            --user-text: #e8e4ff;
+            --agent: #1a1d2e;
+            --input-bg: #151828;
+            --rail: #0f111c;
+            --rail-active: rgba(124, 92, 255, 0.12);
+            --rail-hover: rgba(255, 255, 255, 0.04);
+            --selection: rgba(124, 92, 255, 0.35);
+            --theme-btn: #1a1d2e;
+            --theme-btn-active: #7c5cff;
+            --placeholder-dash: #5a6278;
+            --header-bg: rgba(11, 13, 23, 0.92);
+            --splitter: rgba(255, 255, 255, 0.06);
+            --splitter-hover: #7c5cff;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+            --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+            --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.28);
+            --radius: 16px;
+            --radius-sm: 12px;
+            --radius-lg: 18px;
+            --font-mono: "Cascadia Code", "Consolas", "JetBrains Mono", monospace;
+        }
+        [data-theme="light"] {
+            --bg: #f4f6fb;
+            --bg-subtle: #eef1f8;
+            --surface: #ffffff;
+            --surface-2: #f8f9fc;
+            --editor: #f4f6fb;
+            --border: rgba(15, 23, 42, 0.08);
+            --border-strong: rgba(15, 23, 42, 0.12);
+            --tab-bar: #ffffff;
+            --tab-active: #f8f9fc;
+            --text: #475569;
+            --text-strong: #0f172a;
+            --muted: #64748b;
+            --accent: #6d5efc;
+            --accent-hover: #5b4de8;
+            --accent-soft: rgba(109, 94, 252, 0.12);
+            --accent-text: #ffffff;
+            --user: #ede9fe;
+            --user-text: #312e81;
+            --agent: #ffffff;
+            --input-bg: #ffffff;
+            --rail: #ffffff;
+            --rail-active: rgba(109, 94, 252, 0.1);
+            --rail-hover: rgba(15, 23, 42, 0.04);
+            --selection: rgba(109, 94, 252, 0.2);
+            --theme-btn: #eef1f8;
+            --theme-btn-active: #6d5efc;
+            --placeholder-dash: #94a3b8;
+            --header-bg: rgba(255, 255, 255, 0.88);
+            --splitter: rgba(15, 23, 42, 0.08);
+            --splitter-hover: #6d5efc;
+            --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+            --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+            --shadow-card: 0 2px 12px rgba(15, 23, 42, 0.06);
+        }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            margin: 0;
+            font-family: "DM Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin: 0;
+            padding: .65rem 1.1rem;
+            background: var(--header-bg);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: .85rem;
+            min-width: 0;
+        }
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+            min-width: 0;
+        }
+        .brand-icon {
+            width: 2.1rem;
+            height: 2.1rem;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent) 0%, #a78bfa 100%);
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(124, 92, 255, 0.35);
+        }
+        .brand-icon svg {
+            width: 1.15rem;
+            height: 1.15rem;
+            color: #fff;
+            display: block;
+        }
+        .header-text h1 {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-strong);
+            letter-spacing: -.02em;
+            line-height: 1.2;
+        }
+        .header-text p {
+            margin: .12rem 0 0;
+            color: var(--muted);
+            font-size: .78rem;
+            line-height: 1.35;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+            flex-shrink: 0;
+            margin-left: auto;
+        }
+        .jenkins-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .35rem .75rem;
+            border-radius: 999px;
+            font-size: .72rem;
+            font-weight: 600;
+            color: #059669;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            white-space: nowrap;
+        }
+        .jenkins-pill::before {
+            content: "";
+            width: .45rem;
+            height: .45rem;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+        }
+        html[data-theme="dark"] .jenkins-pill {
+            color: #6ee7b7;
+            background: rgba(16, 185, 129, 0.14);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        .user-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            padding: .35rem .7rem;
+            border-radius: 999px;
+            font-size: .74rem;
+            font-weight: 600;
+            color: var(--text);
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        .logout-btn,
+        .settings-btn {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            height: 2.25rem;
+            padding: 0 .85rem;
+            display: inline-flex;
+            align-items: center;
+            background: var(--theme-btn);
+            color: var(--text);
+            font: inherit;
+            font-size: .74rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.35);
+            color: #ef4444;
+        }
+        .settings-btn:hover {
+            background: var(--accent-soft);
+            border-color: rgba(124, 92, 255, 0.35);
+            color: var(--accent);
+        }
+        .jenkins-pill.offline {
+            color: #fbbf24;
+            background: rgba(251, 191, 36, 0.12);
+            border-color: rgba(251, 191, 36, 0.3);
+        }
+        .jenkins-pill.offline::before {
+            background: #fbbf24;
+            box-shadow: 0 0 6px rgba(251, 191, 36, 0.55);
+        }
+        html[data-theme="dark"] .jenkins-pill.offline {
+            color: #fcd34d;
+            background: rgba(251, 191, 36, 0.14);
+            border-color: rgba(251, 191, 36, 0.35);
+        }
+        .theme-toggle button,
+        .home-btn {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 2.25rem;
+            height: 2.25rem;
+            padding: 0;
+            display: inline-grid;
+            place-items: center;
+            background: var(--theme-btn);
+            color: var(--text);
+            cursor: pointer;
+            text-decoration: none;
+            transition: background .15s, color .15s, border-color .15s, box-shadow .15s;
+        }
+        .theme-toggle button:hover,
+        .home-btn:hover {
+            background: var(--theme-btn-active);
+            color: var(--accent-text);
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(124, 92, 255, 0.3);
+        }
+        .theme-toggle button svg,
+        .home-btn svg {
+            width: 1.05rem;
+            height: 1.05rem;
+            display: block;
+        }
+        .theme-toggle .icon-sun,
+        .theme-toggle .icon-moon {
+            display: none;
+        }
+        html[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+        html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
+
+        /* Workspace */
+        .workspace {
+            flex: 1;
+            display: flex;
+            gap: 0;
+            min-height: 0;
+            overflow: hidden;
+            padding: .65rem;
+            gap: 0;
+        }
+        .workspace > * { margin: 0; }
+        .workspace.resizing {
+            cursor: col-resize;
+            user-select: none;
+        }
+        .workspace.resizing iframe,
+        .workspace.resizing * {
+            cursor: col-resize !important;
+        }
+
+        .splitter {
+            flex: 0 0 4px;
+            width: 4px;
+            margin: 0 .15rem;
+            padding: 0;
+            border: 0;
+            background: var(--splitter);
+            cursor: col-resize;
+            position: relative;
+            z-index: 5;
+            align-self: stretch;
+            border-radius: 999px;
+            transition: background .15s;
+        }
+        .splitter::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: -5px;
+            right: -5px;
+            background: transparent;
+        }
+        .splitter:hover,
+        .splitter.active {
+            background: var(--splitter-hover);
+        }
+
+        /* Left apps rail */
+        .menu-rail {
+            width: 260px;
+            flex: 0 0 auto;
+            background: var(--rail);
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            padding: .85rem .65rem;
+            gap: .35rem;
+            min-width: 140px;
+            max-width: 50%;
+            overflow: auto;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        .menu-title {
+            padding: .25rem .55rem .65rem;
+            font-size: .7rem;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .app-list {
+            display: flex;
+            flex-direction: column;
+            gap: .3rem;
+            padding: 0 .15rem;
+        }
+        .app-item {
+            display: flex;
+            align-items: center;
+            gap: .7rem;
+            width: 100%;
+            text-align: left;
+            border: 1px solid transparent;
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--text);
+            padding: .6rem .65rem;
+            cursor: pointer;
+            font: inherit;
+            transition: background .15s, border-color .15s, box-shadow .15s;
+        }
+        .app-item:hover {
+            background: var(--rail-hover);
+            border-color: var(--border);
+        }
+        .app-item:active {
+            background: var(--rail-active);
+        }
+        .app-avatar {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: grid;
+            place-items: center;
+            font-size: .82rem;
+            font-weight: 700;
+            color: var(--accent);
+            background: var(--accent-soft);
+            border: 1px solid rgba(124, 92, 255, 0.2);
+        }
+        .app-item-body {
+            min-width: 0;
+            flex: 1;
+        }
+        .app-item .app-name {
+            display: block;
+            font-size: .84rem;
+            font-weight: 600;
+            color: var(--text-strong);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .app-item .app-job {
+            display: block;
+            margin-top: .1rem;
+            font-family: var(--font-mono);
+            font-size: .68rem;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .app-empty {
+            padding: .75rem .65rem;
+            color: var(--muted);
+            font-size: .78rem;
+            line-height: 1.45;
+        }
+        .menu-spacer { flex: 1; }
+        .menu-foot {
+            text-align: left;
+            font-size: .65rem;
+            color: var(--muted);
+            padding: .65rem .55rem .15rem;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            border-top: 1px solid var(--border);
+            margin-top: .35rem;
+        }
+
+        /* Jenkins-style applications table */
+        .app-table-wrap {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            flex: 1 1 auto;
+            padding: .65rem .85rem 1rem;
+            overflow-x: auto;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .app-table {
+            width: max-content;
+            min-width: 100%;
+            border-collapse: collapse;
+            font-size: .8rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+        }
+        .app-table thead th {
+            text-align: left;
+            font-size: .7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: var(--muted);
+            padding: .65rem .7rem;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface-2);
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .app-table tbody tr.app-row {
+            border-bottom: 1px solid var(--border);
+            transition: background .12s;
+        }
+        .app-table tbody tr.app-row:last-child { border-bottom: 0; }
+        .app-table tbody tr.app-row:hover { background: var(--rail-hover); }
+        .app-table td {
+            padding: .7rem .7rem;
+            vertical-align: middle;
+            color: var(--text);
+        }
+        .app-table .col-s { width: 2.2rem; text-align: center; }
+        .app-table .col-name { min-width: 9rem; }
+        .app-table .col-phase { width: 6.5rem; }
+        .app-table .col-job { min-width: 8rem; }
+        .app-table .col-app { min-width: 7rem; }
+        .app-table .col-last { min-width: 6.5rem; }
+        .app-table .col-time { min-width: 9.5rem; white-space: nowrap; }
+        .app-table .col-dur { width: 5.5rem; }
+        .app-table .col-status { width: 6.5rem; }
+        .app-table .col-actions { min-width: 12rem; text-align: right; }
+        .status-dot {
+            display: inline-block;
+            width: .85rem;
+            height: .85rem;
+            border-radius: 50%;
+            background: #6b7280;
+            box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.2);
+        }
+        .status-dot.success { background: #22c55e; box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.22); }
+        .status-dot.failed { background: #ef4444; box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.22); }
+        .status-dot.unknown { background: #6b7280; }
+        .app-row-name {
+            display: block;
+            font-weight: 700;
+            color: var(--accent);
+            font-size: .86rem;
+        }
+        .app-row-desc {
+            display: block;
+            margin-top: .15rem;
+            font-size: .72rem;
+            color: var(--muted);
+            max-width: 16rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .phase-pill {
+            display: inline-block;
+            font-size: .68rem;
+            font-weight: 700;
+            padding: .2rem .45rem;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            color: var(--text);
+            white-space: nowrap;
+        }
+        .phase-pill.build {
+            color: #38bdf8;
+            border-color: rgba(56, 189, 248, 0.35);
+            background: rgba(56, 189, 248, 0.1);
+        }
+        .phase-pill.deploy {
+            color: var(--accent);
+            border-color: rgba(124, 92, 255, 0.35);
+            background: var(--accent-soft);
+        }
+        .mono-cell {
+            font-family: var(--font-mono);
+            font-size: .74rem;
+            color: var(--text-strong);
+        }
+        .muted-cell { color: var(--muted); font-size: .76rem; }
+        .app-row-actions {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: .35rem;
+        }
+        .app-row-actions button {
+            border-radius: 8px;
+            font: inherit;
+            font-size: .72rem;
+            font-weight: 600;
+            padding: .35rem .6rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .app-row-actions button.edit-app,
+        .app-row-actions button.rollback-app,
+        .app-row-actions button.remove-app {
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+        }
+        .app-row-actions button.edit-app:hover,
+        .app-row-actions button.rollback-app:hover {
+            background: var(--accent-soft);
+            border-color: rgba(124, 92, 255, 0.35);
+            color: var(--accent);
+        }
+        .app-row-actions button.remove-app:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.35);
+            color: #ef4444;
+        }
+        .app-row-actions button.use-app,
+        .app-row-actions button.build-app {
+            border: 0;
+            background: var(--accent);
+            color: var(--accent-text);
+        }
+        .app-row-actions button.use-app:hover,
+        .app-row-actions button.build-app:hover {
+            background: var(--accent-hover);
+        }
+
+        .catalog-toolbar {
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+            flex-wrap: wrap;
+            margin-top: .65rem;
+        }
+        #addAppBtn {
+            border: 0;
+            border-radius: 10px;
+            background: var(--accent);
+            color: var(--accent-text);
+            font: inherit;
+            font-size: .74rem;
+            font-weight: 600;
+            padding: .45rem .9rem;
+            cursor: pointer;
+            transition: background .15s, box-shadow .15s;
+        }
+        #addAppBtn:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 14px rgba(124, 92, 255, 0.35);
+        }
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        .modal-backdrop.open { display: flex; }
+        .modal-card {
+            width: min(100%, 26rem);
+            max-height: min(92vh, 44rem);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            padding: 1.15rem 1.2rem;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin: auto;
+        }
+        .modal-card.app-modal-card {
+            width: min(100%, 44rem);
+        }
+        .modal-card,
+        .modal-card input,
+        .modal-card select,
+        .modal-card textarea,
+        .modal-card .field-hint,
+        .modal-card .modal-hint {
+            user-select: text;
+            -webkit-user-select: text;
+        }
+        .modal-card input,
+        .modal-card select,
+        .modal-card textarea {
+            pointer-events: auto;
+        }
+        .modal-card h3 {
+            margin: 0 0 .35rem;
+            font-size: 1rem;
+            color: var(--text-strong);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .modal-card .modal-hint {
+            margin: 0 0 .9rem;
+            font-size: .76rem;
+            color: var(--muted);
+            line-height: 1.45;
+            flex-shrink: 0;
+        }
+        .modal-card > form {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            flex: 1;
+            overflow: hidden;
+        }
+        .modal-fields {
+            display: flex;
+            flex-direction: column;
+            gap: .65rem;
+            overflow-y: auto;
+            min-height: 0;
+            padding-right: .15rem;
+            overscroll-behavior: contain;
+        }
+        .modal-fields.app-modal-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .65rem .85rem;
+            align-content: start;
+        }
+        .modal-fields .field-span-2 {
+            grid-column: 1 / -1;
+        }
+        .app-modal-fields.phase-build .cd-only {
+            display: none !important;
+        }
+        .app-modal-fields:not(.phase-build) .ci-only {
+            display: none !important;
+        }
+        .modal-fields label {
+            display: flex;
+            flex-direction: column;
+            gap: .3rem;
+            font-size: .74rem;
+            font-weight: 600;
+            color: var(--text);
+            min-width: 0;
+        }
+        .modal-fields .field-hint {
+            margin: 0;
+            font-size: .72rem;
+            font-weight: 400;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+        .modal-fields input,
+        .modal-fields select {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--input-bg);
+            color: var(--text-strong);
+            font: inherit;
+            font-size: .82rem;
+            font-weight: 400;
+            padding: .55rem .7rem;
+            outline: none;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .modal-fields select {
+            cursor: pointer;
+            appearance: auto;
+        }
+        .modal-fields input:focus,
+        .modal-fields select:focus {
+            border-color: rgba(124, 92, 255, 0.45);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+        .modal-error {
+            display: none;
+            margin: .65rem 0 0;
+            font-size: .76rem;
+            color: #ef4444;
+            flex-shrink: 0;
+        }
+        .modal-error.visible { display: block; }
+        .modal-error.success { color: #16a34a; }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: .5rem;
+            margin-top: 1rem;
+            flex-shrink: 0;
+        }
+        .modal-actions.jenkins-actions {
+            justify-content: space-between;
+        }
+        .modal-actions .jenkins-actions-left,
+        .modal-actions .jenkins-actions-right {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem;
+        }
+        @media (max-width: 640px) {
+            .modal-fields.app-modal-fields {
+                grid-template-columns: 1fr;
+            }
+        }
+        .modal-actions button {
+            border-radius: 10px;
+            font: inherit;
+            font-size: .78rem;
+            font-weight: 600;
+            padding: .45rem .9rem;
+            cursor: pointer;
+        }
+        .modal-actions .btn-cancel {
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text);
+        }
+        .modal-actions .btn-save {
+            border: 0;
+            background: var(--accent);
+            color: var(--accent-text);
+        }
+        .modal-actions .btn-save:disabled {
+            opacity: .65;
+            cursor: wait;
+        }
+        .modal-actions .btn-secondary {
+            border: 1px solid var(--border);
+            background: var(--bg-subtle);
+            color: var(--text);
+        }
+        .modal-actions .btn-secondary:hover {
+            border-color: rgba(124, 92, 255, 0.35);
+        }
+        .modal-actions .btn-secondary:disabled {
+            opacity: .65;
+            cursor: wait;
+        }
+        .modal-actions .btn-danger {
+            border: 0;
+            background: #ef4444;
+            color: #fff;
+        }
+        .modal-actions .btn-danger:hover {
+            background: #dc2626;
+        }
+        .modal-actions .btn-danger:disabled {
+            opacity: .65;
+            cursor: wait;
+        }
+        .confirm-remove-name {
+            font-weight: 700;
+            color: var(--text-strong);
+        }
+        .confirm-remove-job {
+            font-family: var(--font-mono);
+            font-weight: 600;
+            color: var(--accent);
+        }
+        .remove-confirm-field {
+            display: flex;
+            flex-direction: column;
+            gap: .3rem;
+            margin-top: .85rem;
+            font-size: .74rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .remove-confirm-field input {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--input-bg);
+            color: var(--text-strong);
+            font: inherit;
+            font-size: .82rem;
+            font-weight: 400;
+            font-family: var(--font-mono);
+            padding: .55rem .7rem;
+            outline: none;
+        }
+        .remove-confirm-field input:focus {
+            border-color: rgba(239, 68, 68, 0.45);
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+        }
+        .remove-confirm-field input.mismatch {
+            border-color: rgba(239, 68, 68, 0.55);
+        }
+
+        .health-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            border-radius: 999px;
+            padding: .2rem .55rem;
+            font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--muted);
+            white-space: nowrap;
+        }
+        .health-badge::before {
+            content: "";
+            width: .45rem;
+            height: .45rem;
+            border-radius: 50%;
+            background: var(--muted);
+        }
+        .health-badge.up {
+            color: #0f5132;
+            background: #d1e7dd;
+            border-color: #a3cfbb;
+        }
+        .health-badge.up::before { background: #198754; }
+        .health-badge.down {
+            color: #842029;
+            background: #f8d7da;
+            border-color: #f1aeb5;
+        }
+        .health-badge.down::before { background: #dc3545; }
+        .health-badge.unknown {
+            color: var(--muted);
+        }
+        .health-badge.deploying {
+            color: #084298;
+            background: #cfe2ff;
+            border-color: #9ec5fe;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+        .health-badge.deploying::before {
+            background: #0d6efd;
+            animation: healthPulse 1s ease-in-out infinite;
+        }
+        .health-badge.deployed {
+            color: #664d03;
+            background: #fff3cd;
+            border-color: #ffecb5;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+        .health-badge.deployed::before { background: #ffc107; }
+        html[data-theme="dark"] .health-badge.up {
+            color: #b7f0cf;
+            background: #163528;
+            border-color: #1f6b45;
+        }
+        html[data-theme="dark"] .health-badge.down {
+            color: #ffc9ce;
+            background: #3a171b;
+            border-color: #7a2e36;
+        }
+        html[data-theme="dark"] .health-badge.deploying {
+            color: #cfe2ff;
+            background: #0b2a4a;
+            border-color: #1a4d80;
+        }
+        html[data-theme="dark"] .health-badge.deployed {
+            color: #ffe69c;
+            background: #3a2f0b;
+            border-color: #6b5a12;
+        }
+        @keyframes healthPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .35; transform: scale(.85); }
+        }
+        .health-dots::after {
+            content: "";
+            display: inline-block;
+            width: 1.1em;
+            text-align: left;
+            animation: healthDots 1.2s steps(4, end) infinite;
+        }
+        @keyframes healthDots {
+            0% { content: ""; }
+            25% { content: "."; }
+            50% { content: ".."; }
+            75% { content: "..."; }
+        }
+        .health-toolbar {
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+            flex-wrap: wrap;
+            margin-top: .5rem;
+        }
+        .health-meta {
+            margin: 0;
+            font-size: .72rem;
+            color: var(--muted);
+        }
+        #healthRefreshBtn {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface);
+            color: var(--text-strong);
+            font: inherit;
+            font-size: .74rem;
+            font-weight: 600;
+            padding: .4rem .8rem;
+            cursor: pointer;
+            transition: background .15s, border-color .15s, box-shadow .15s;
+        }
+        #healthRefreshBtn:hover {
+            background: var(--accent-soft);
+            border-color: rgba(124, 92, 255, 0.35);
+            color: var(--accent);
+        }
+        #healthRefreshBtn:disabled {
+            opacity: .65;
+            cursor: wait;
+        }
+
+        /* Middle panel */
+        .editor-panel {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            min-width: 0; /* allow shrink so chat can grow; table scrolls inside */
+            background: var(--editor);
+            overflow: hidden;
+            border: 0;
+            border-radius: 0;
+        }
+        .editor-tabs {
+            display: none;
+        }
+        .editor-body {
+            flex: 1;
+            min-height: 0;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            gap: 0;
+            overflow: hidden;
+            background: transparent;
+        }
+        .editor-intro {
+            padding: .85rem 1rem 0;
+            flex-shrink: 0;
+        }
+        .editor-body h2 {
+            margin: 0;
+            font-size: 1.15rem;
+            color: var(--text-strong);
+            font-weight: 700;
+            letter-spacing: -.02em;
+        }
+        .editor-body p {
+            margin: .35rem 0 0;
+            color: var(--muted);
+            font-size: .82rem;
+            line-height: 1.5;
+            max-width: 52rem;
+        }
+        .editor-canvas {
+            flex: 1;
+            min-height: 0;
+            min-width: 0;
+            margin: 0;
+            border: 0;
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: flex-start;
+            color: var(--muted);
+            font-size: .85rem;
+            text-align: left;
+            padding: 0;
+            line-height: 1.5;
+            overflow: hidden;
+        }
+        .editor-status {
+            display: none;
+        }
+
+        /* Chat panel */
+        .chat-panel {
+            width: 300px;
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            min-width: 180px;
+            max-width: 48%;
+            background: var(--surface);
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        .tool-header {
+            display: flex;
+            align-items: center;
+            padding: .85rem 1rem;
+            background: transparent;
+            border-bottom: 1px solid var(--border);
+            min-height: auto;
+        }
+        .tool-tab {
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+            font-size: .88rem;
+            font-weight: 700;
+            color: var(--text-strong);
+            letter-spacing: -.01em;
+        }
+        .tool-tab::before {
+            content: "";
+            width: .5rem;
+            height: .5rem;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 8px rgba(124, 92, 255, 0.5);
+        }
+        .tool-tab.active { color: var(--text-strong); }
+        .tool-actions {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            padding-right: .5rem;
+            color: var(--muted);
+            font-size: .7rem;
+        }
+        #chat {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: .55rem;
+            padding: .85rem;
+            min-height: 0;
+            background: var(--surface-2);
+        }
+        .msg {
+            max-width: 92%;
+            padding: .7rem .85rem;
+            border-radius: var(--radius-sm);
+            white-space: pre-wrap;
+            line-height: 1.45;
+            font-size: .82rem;
+            border: 1px solid var(--border);
+        }
+        .msg.user {
+            align-self: flex-end;
+            background: #7c5cff;
+            color: #0f111c;
+            border-color: transparent;
+            font-weight: 600;
+        }
+        html[data-theme="light"] .msg.user {
+            background: #6d5efc;
+            color: #ffffff;
+        }
+        .msg.assistant {
+            align-self: flex-start;
+            background: var(--agent);
+            color: var(--text);
+            box-shadow: var(--shadow-sm);
+        }
+        .deploy-result-card {
+            align-self: flex-start;
+            width: min(100%, 22rem);
+            background: var(--agent);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem 1.05rem;
+            box-shadow: var(--shadow-md);
+            font-size: .82rem;
+        }
+        .deploy-result-header {
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+            margin-bottom: .85rem;
+        }
+        .deploy-result-icon {
+            width: 1.7rem;
+            height: 1.7rem;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            font-size: .85rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .deploy-result-card.success .deploy-result-icon {
+            background: #22c55e;
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+        }
+        .deploy-result-card.failed .deploy-result-icon {
+            background: #ef4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+        }
+        .deploy-result-header h3 {
+            margin: 0;
+            font-size: .92rem;
+            font-weight: 700;
+            color: var(--text-strong);
+            letter-spacing: -.01em;
+            line-height: 1.3;
+        }
+        .deploy-result-meta {
+            display: grid;
+            gap: .45rem;
+            margin: 0 0 .9rem;
+        }
+        .deploy-result-row {
+            display: grid;
+            grid-template-columns: 7.2rem 1fr;
+            gap: .5rem;
+            align-items: baseline;
+        }
+        .deploy-result-row dt {
+            margin: 0;
+            color: var(--muted);
+            font-size: .76rem;
+            font-weight: 500;
+        }
+        .deploy-result-row dd {
+            margin: 0;
+            color: var(--text-strong);
+            font-size: .8rem;
+            font-weight: 600;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .deploy-result-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .4rem;
+        }
+        .deploy-badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: .28rem .65rem;
+            font-size: .7rem;
+            font-weight: 700;
+            letter-spacing: .01em;
+        }
+        .deploy-badge.added {
+            background: rgba(34, 197, 94, 0.22);
+            color: #4ade80;
+        }
+        .deploy-badge.destroyed {
+            background: rgba(244, 63, 94, 0.22);
+            color: #fb7185;
+        }
+        .deploy-badge.changed {
+            background: rgba(245, 158, 11, 0.22);
+            color: #fbbf24;
+        }
+        html[data-theme="light"] .deploy-badge.added {
+            background: rgba(22, 163, 74, 0.14);
+            color: #15803d;
+        }
+        html[data-theme="light"] .deploy-badge.destroyed {
+            background: rgba(225, 29, 72, 0.12);
+            color: #be123c;
+        }
+        html[data-theme="light"] .deploy-badge.changed {
+            background: rgba(217, 119, 6, 0.14);
+            color: #b45309;
+        }
+        .empty {
+            color: var(--muted);
+            text-align: center;
+            margin: auto;
+            font-size: .82rem;
+            padding: 1.5rem 1rem;
+            line-height: 1.5;
+        }
+        .loading {
+            display: none;
+            align-self: flex-start;
+            align-items: center;
+            gap: .65rem;
+            background: var(--agent);
+            border: 1px solid var(--border);
+            padding: .7rem .85rem;
+            border-radius: var(--radius-sm);
+            max-width: 92%;
+            font-size: .82rem;
+            box-shadow: var(--shadow-sm);
+        }
+        .loading.visible { display: flex; }
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid color-mix(in srgb, var(--text) 25%, transparent);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { color: var(--muted); }
+        .loading-text strong {
+            color: var(--accent);
+            font-variant-numeric: tabular-nums;
+        }
+        form#chatForm {
+            display: block;
+            padding: .75rem;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+            border-radius: 0;
+            min-width: 0;
+        }
+        form#chatForm.busy {
+            opacity: .7;
+            pointer-events: none;
+        }
+        .composer {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--input-bg);
+            min-width: 0;
+            overflow: hidden;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .composer:focus-within {
+            border-color: rgba(124, 92, 255, 0.45);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+        #messageInput {
+            display: block;
+            width: 100%;
+            height: 4.6rem;
+            min-height: 4.6rem;
+            max-height: 8rem;
+            resize: vertical;
+            border: 0;
+            border-radius: 0;
+            padding: .65rem .85rem .25rem;
+            font: inherit;
+            font-size: .82rem;
+            line-height: 1.4;
+            background: transparent;
+            color: var(--text-strong);
+            outline: none;
+        }
+        #messageInput::placeholder {
+            color: var(--muted);
+        }
+        .composer-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: .35rem .45rem .45rem;
+            gap: .25rem;
+        }
+        #sendBtn {
+            flex: 0 0 auto;
+            width: 2.15rem;
+            height: 2.15rem;
+            min-width: 2.15rem;
+            margin: 0;
+            padding: 0;
+            border: 0;
+            border-radius: 12px;
+            display: inline-grid;
+            place-items: center;
+            background: var(--accent);
+            color: var(--accent-text);
+            cursor: pointer;
+            transition: background .15s, box-shadow .15s, transform .1s;
+        }
+        #sendBtn svg {
+            width: 1.05rem;
+            height: 1.05rem;
+            display: block;
+        }
+        #sendBtn .icon-send {
+            transform: translateX(1px);
+        }
+        #sendBtn:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 14px rgba(124, 92, 255, 0.4);
+        }
+        #sendBtn:active {
+            transform: scale(.96);
+        }
+        #sendBtn:disabled {
+            cursor: wait;
+            opacity: .75;
+            box-shadow: none;
+        }
+        #sendBtn.busy .icon-send { display: none; }
+        #sendBtn.busy .icon-wait { display: block; }
+        #sendBtn .icon-wait { display: none; }
+
+        .confirm-card {
+            align-self: flex-start;
+            width: min(100%, 22rem);
+            background: var(--agent);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: .9rem;
+            font-size: .82rem;
+            box-shadow: var(--shadow-md);
+        }
+        .confirm-card h3 {
+            margin: 0 0 .4rem;
+            font-size: .9rem;
+            color: var(--text-strong);
+            font-weight: 700;
+        }
+        .confirm-card p {
+            margin: 0 0 .65rem;
+            color: var(--muted);
+            font-size: .76rem;
+            line-height: 1.45;
+        }
+        .confirm-options {
+            display: flex;
+            flex-direction: column;
+            gap: .4rem;
+            margin-bottom: .75rem;
+        }
+        .confirm-option {
+            display: flex;
+            gap: .55rem;
+            align-items: flex-start;
+            padding: .55rem .65rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            background: var(--surface-2);
+            transition: border-color .15s, background .15s;
+        }
+        .confirm-option:hover {
+            border-color: rgba(124, 92, 255, 0.4);
+            background: var(--accent-soft);
+        }
+        .confirm-option input {
+            margin-top: .15rem;
+            accent-color: var(--accent);
+        }
+        .confirm-option .opt-name {
+            display: block;
+            font-weight: 600;
+            color: var(--text-strong);
+        }
+        .confirm-option .opt-meta {
+            display: block;
+            margin-top: .12rem;
+            font-size: .7rem;
+            color: var(--muted);
+        }
+        .confirm-card .confirm-fields {
+            display: flex;
+            flex-direction: column;
+            gap: .55rem;
+            margin-bottom: .75rem;
+        }
+        .confirm-card .confirm-fields label {
+            display: flex;
+            flex-direction: column;
+            gap: .25rem;
+            font-size: .72rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .confirm-card .confirm-fields input {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--input-bg);
+            color: var(--text-strong);
+            font: inherit;
+            font-size: .8rem;
+            font-weight: 400;
+            padding: .45rem .6rem;
+            outline: none;
+        }
+        .confirm-card .confirm-fields input:focus {
+            border-color: rgba(124, 92, 255, 0.45);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+        .confirm-card .confirm-error {
+            display: none;
+            margin: 0 0 .65rem;
+            font-size: .74rem;
+            color: #ef4444;
+        }
+        .confirm-card .confirm-error.visible { display: block; }
+        .tool-header .chat-quick-actions {
+            margin-left: auto;
+            display: flex;
+            gap: .35rem;
+            padding-right: .55rem;
+        }
+        .tool-header .chat-quick-actions button {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            color: var(--text-strong);
+            font: inherit;
+            font-size: .7rem;
+            font-weight: 600;
+            padding: .3rem .55rem;
+            cursor: pointer;
+        }
+        .tool-header .chat-quick-actions button:hover {
+            background: var(--accent-soft);
+            border-color: rgba(124, 92, 255, 0.35);
+            color: var(--accent);
+        }
+        .confirm-actions {
+            display: flex;
+            gap: .45rem;
+            justify-content: flex-end;
+        }
+        .confirm-actions button {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font: inherit;
+            font-size: .76rem;
+            font-weight: 600;
+            padding: .45rem .85rem;
+            cursor: pointer;
+            transition: background .15s, box-shadow .15s;
+        }
+        .btn-cancel {
+            background: var(--surface-2);
+            color: var(--text);
+        }
+        .btn-cancel:hover {
+            background: var(--rail-hover);
+        }
+        .btn-approve {
+            background: var(--accent);
+            color: var(--accent-text);
+            border-color: transparent;
+        }
+        .btn-approve:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 12px rgba(124, 92, 255, 0.35);
+        }
+        .msg.system-cancel {
+            align-self: flex-start;
+            background: var(--agent);
+            color: var(--muted);
+            border-style: dashed;
+        }
+
+        @media (max-width: 900px) {
+            .workspace {
+                flex-wrap: wrap;
+                padding: .5rem;
+                gap: .5rem;
+            }
+            .menu-rail {
+                width: 100% !important;
+                max-width: none;
+                max-height: 180px;
+            }
+            .splitter { display: none; }
+            .editor-panel {
+                width: 100%;
+                min-height: 200px;
+                flex: 1 1 40%;
+            }
+            .chat-panel {
+                width: 100% !important;
+                max-width: none;
+                flex: 1 1 45%;
+                min-height: 260px;
+            }
+            .jenkins-pill { display: none; }
+            .header-text p { display: none; }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div class="header-left">
+        <a class="home-btn" href="/" aria-label="Home" title="Home">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 10.5L12 3l9 7.5"></path>
+                <path d="M5 10v10h14V10"></path>
+            </svg>
+        </a>
+        <div class="header-brand">
+            <div class="brand-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                </svg>
+            </div>
+            <div class="header-text">
+                <h1>Deploy Agent</h1>
+                <p>Ask the AI agent to deploy your application to a server (simulation).</p>
+            </div>
+        </div>
+    </div>
+    <div class="header-actions">
+        <span class="jenkins-pill offline" id="jenkinsStatusPill" title="Jenkins credentials">Jenkins not configured</span>
+        <button type="button" class="settings-btn" id="jenkinsSettingsBtn" title="Jenkins connection settings">Settings</button>
+        <span class="user-pill" th:if="${currentUsername != null}"
+              th:text="${currentUsername}">admin</span>
+        <form th:action="@{/logout}" method="post" style="margin:0;display:inline;">
+            <button type="submit" class="logout-btn" title="Sign out">Logout</button>
+        </form>
+        <div class="theme-toggle">
+            <button type="button" id="themeToggle" aria-label="Switch to dark theme" title="Toggle theme">
+                <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="4"></circle>
+                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+                </svg>
+                <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 14.5A8.5 8.5 0 1 1 9.5 3a7 7 0 0 0 11.5 11.5z"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+</header>
+
+<div class="workspace" id="workspace">
+    <!-- Left applications list -->
+    <aside class="menu-rail" id="menuPanel" aria-label="Applications">
+        <div class="menu-title">Applications</div>
+        <div class="app-list" th:if="${applications != null and !#lists.isEmpty(applications)}">
+            <button type="button" class="app-item use-app"
+                    th:each="app : ${applications}"
+                    th:attr="data-app=${app.name}, title=${app.description}">
+                <span class="app-avatar" th:text="${#strings.toUpperCase(#strings.substring(app.name, 0, 1))}">P</span>
+                <span class="app-item-body">
+                    <span class="app-name" th:text="${app.name}">payment-app</span>
+                    <span class="app-job"
+                          th:text="|${app.phase.label} · ${app.jenkinsJob}|">Deploy (CD) · payment-app</span>
+                </span>
+            </button>
+        </div>
+        <button type="button" id="addAppBtnRail" class="app-item" style="margin-top:.35rem;justify-content:center;color:var(--accent);font-weight:600;">
+            + Add application
+        </button>
+        <div class="app-empty" th:if="${applications == null or #lists.isEmpty(applications)}">
+            No applications registered.
+        </div>
+        <div class="menu-spacer"></div>
+        <div class="menu-foot">Catalog</div>
+    </aside>
+
+    <div class="splitter" id="splitLeft" role="separator" aria-orientation="vertical"
+         aria-label="Resize menu and workspace" title="Drag to resize"></div>
+
+    <!-- Middle workspace — registered applications cards -->
+    <section class="editor-panel" id="editorPanel" aria-label="Workspace">
+        <div class="editor-tabs">
+            <div class="editor-tab active"><span class="dot"></span> applications</div>
+        </div>
+        <div class="editor-body">
+            <div class="editor-intro">
+                <h2>Registered applications</h2>
+                <p>Select an application, then Approve or Cancel in chat before sending.
+                    Health is checked only when you click Refresh health.
+                    Add or remove apps here — changes are saved to applications.json.</p>
+                <div class="catalog-toolbar">
+                    <button type="button" id="addAppBtn" title="Add application to catalog">+ Add application</button>
+                    <button type="button" id="healthRefreshBtn" title="Check Prometheus health now">Refresh health</button>
+                    <span class="health-meta" id="healthCheckedAt">Last check: —</span>
+                </div>
+            </div>
+            <div class="editor-canvas">
+                <div class="app-table-wrap" th:if="${applications != null and !#lists.isEmpty(applications)}">
+                    <table class="app-table" id="appTable">
+                        <thead>
+                            <tr>
+                                <th class="col-s" title="Last run status">S</th>
+                                <th class="col-name">Name</th>
+                                <th class="col-phase">Phase</th>
+                                <th class="col-job">Job</th>
+                                <th class="col-app">APPLICATION</th>
+                                <th class="col-last">Last run</th>
+                                <th class="col-time">Time</th>
+                                <th class="col-dur">Duration</th>
+                                <th class="col-status">Health</th>
+                                <th class="col-actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="app-row" th:each="app : ${applications}"
+                                th:attr="data-app-card=${app.name},
+                                         data-name=${app.name},
+                                         data-phase=${app.phase.id},
+                                         data-jenkins-job=${app.jenkinsJob},
+                                         data-job-type=${app.jobType.id},
+                                         data-exposure=${app.exposure.id},
+                                         data-container-port=${app.containerPort},
+                                         data-service-port=${app.servicePort},
+                                         data-jenkins-application=${app.jenkinsApplication},
+                                         data-image-version=${app.imageVersion},
+                                         data-description=${app.description},
+                                         data-health-url=${app.healthUrl},
+                                         data-cluster=${app.cluster},
+                                         data-namespace=${app.namespace},
+                                         data-last-executed=${app.lastExecutedAt},
+                                         data-last-status=${app.lastStatus},
+                                         data-last-duration=${app.lastDurationSec}">
+                                <td class="col-s">
+                                    <span class="status-dot success"
+                                          th:if="${app.lastStatus != null and #strings.equalsIgnoreCase(app.lastStatus, 'SUCCESS')}"
+                                          title="SUCCESS"></span>
+                                    <span class="status-dot failed"
+                                          th:if="${app.lastStatus != null and #strings.equalsIgnoreCase(app.lastStatus, 'FAILED')}"
+                                          title="FAILED"></span>
+                                    <span class="status-dot unknown"
+                                          th:if="${app.lastStatus == null or app.lastStatus.isEmpty()}"
+                                          title="No runs yet"></span>
+                                </td>
+                                <td class="col-name">
+                                    <span class="app-row-name" th:text="${app.name}">payment-app</span>
+                                    <span class="app-row-desc" th:if="${app.description != null and !app.description.isEmpty()}"
+                                          th:text="${app.description}">Description</span>
+                                </td>
+                                <td class="col-phase">
+                                    <span class="phase-pill build" th:if="${app.phase.build}" th:text="${app.phase.label}">Build (CI)</span>
+                                    <span class="phase-pill deploy" th:unless="${app.phase.build}" th:text="${app.phase.label}">Deploy (CD)</span>
+                                </td>
+                                <td class="col-job mono-cell" th:text="${app.jenkinsJob}">common-deploy-job</td>
+                                <td class="col-app mono-cell"
+                                    th:text="${app.jenkinsApplication != null ? app.jenkinsApplication : app.name}">payment-app</td>
+                                <td class="col-last muted-cell last-run-cell"
+                                    th:attr="data-ts=${app.lastExecutedAt}"
+                                    th:text="${app.lastExecutedAt != null ? app.lastExecutedAt : 'Never'}">Never</td>
+                                <td class="col-time muted-cell exec-time-cell"
+                                    th:attr="data-ts=${app.lastExecutedAt}"
+                                    th:text="${app.lastExecutedAt != null ? app.lastExecutedAt : '—'}">—</td>
+                                <td class="col-dur muted-cell duration-cell"
+                                    th:attr="data-sec=${app.lastDurationSec}"
+                                    th:text="${app.lastDurationSec != null ? app.lastDurationSec + ' sec' : '—'}">—</td>
+                                <td class="col-status">
+                                    <span class="health-badge unknown" th:attr="data-health-for=${app.name}"
+                                          th:if="${app.phase.deploy}">…</span>
+                                    <span class="health-badge unknown" th:unless="${app.phase.deploy}"
+                                          title="Build (CI)">CI</span>
+                                </td>
+                                <td class="col-actions">
+                                    <div class="app-row-actions">
+                                        <button type="button" class="edit-app" th:attr="data-app=${app.name}">Edit</button>
+                                        <button type="button" class="remove-app" th:attr="data-app=${app.name}">Remove</button>
+                                        <button type="button" class="build-app" th:if="${app.phase.build}"
+                                                th:attr="data-app=${app.name}">Build</button>
+                                        <button type="button" class="rollback-app" th:if="${app.phase.deploy}"
+                                                th:attr="data-app=${app.name}">Rollback</button>
+                                        <button type="button" class="use-app" th:if="${app.phase.deploy}"
+                                                th:attr="data-app=${app.name}">Deploy</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="app-empty" th:if="${applications == null or #lists.isEmpty(applications)}">
+                    No applications registered. Click Add application to create one.
+                </div>
+            </div>
+        </div>
+        <div class="editor-status">
+            <span>UTF-8</span>
+            <span>Deploy Agent</span>
+            <span>Ready</span>
+        </div>
+    </section>
+
+    <div class="splitter" id="splitRight" role="separator" aria-orientation="vertical"
+         aria-label="Resize workspace and chat" title="Drag to resize"></div>
+
+    <!-- Right AI Chat -->
+    <section class="chat-panel" id="chatPanel" aria-label="AI Chat">
+        <div class="tool-header">
+            <div class="tool-tab active">AI Chat</div>
+            <div class="chat-quick-actions">
+                <button type="button" id="chatDeployBtn" title="Approve a deploy in chat">Deploy</button>
+                <button type="button" id="chatRollbackBtn" title="Rollback via common-rollback-job">Rollback</button>
+            </div>
+        </div>
+        <div id="chat">
+            <div th:if="${#lists.isEmpty(messages)}" class="empty" id="emptyHint">
+                Example: Deploy payment-app via Jenkins<br>
+                or Rollback payment-app to image 1.0.4
+            </div>
+            <div th:each="m : ${messages}"
+                 th:class="'msg ' + ${m.role}"
+                 th:text="${m.content}"></div>
+            <div id="loading" class="loading" aria-live="polite">
+                <div class="spinner" aria-hidden="true"></div>
+                <div class="loading-text">
+                    Agent is working… <strong id="seconds">0</strong>s
+                </div>
+            </div>
+        </div>
+        <form id="chatForm" method="post" th:action="@{/chat}">
+            <input type="hidden" id="messageHidden" name="message" value="">
+            <div class="composer">
+                <textarea id="messageInput" rows="3"
+                          placeholder="Describe the deployment…" required></textarea>
+                <div class="composer-bar">
+                    <button id="sendBtn" type="submit" aria-label="Send" title="Send">
+                        <svg class="icon-send" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                            <path d="M3.4 20.6c-.5.2-.9-.3-.7-.8L5.2 13l9.3-1-9.3-1L2.7 4.2c-.2-.5.2-1 .7-.8l17.5 7.5c.5.2.5.9 0 1.1L3.4 20.6z"/>
+                        </svg>
+                        <svg class="icon-wait" viewBox="0 0 24 24" aria-hidden="true" fill="none"
+                             stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+                            <circle cx="12" cy="12" r="8" stroke-dasharray="36" stroke-dashoffset="12"></circle>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </section>
+</div>
+
+<div class="modal-backdrop" id="appModal" aria-hidden="true">
+    <div class="modal-card app-modal-card" role="dialog" aria-labelledby="appModalTitle">
+        <h3 id="appModalTitle">Add application</h3>
+        <p class="modal-hint" id="appModalHint">Saved into applications.json and available for deploy immediately.</p>
+        <form id="appForm">
+            <input type="hidden" name="originalName" id="appOriginalName" value="">
+            <div class="modal-fields app-modal-fields" id="appModalFields">
+                <label>Phase
+                    <select name="phase" id="appPhase" required>
+                        <option value="build" selected>Build (CI)</option>
+                        <option value="deploy">Deploy (CD)</option>
+                    </select>
+                </label>
+                <label>Name
+                    <span class="field-hint">Catalog/UI name — any value you want (not the Jenkins job).</span>
+                    <input name="name" required placeholder="e.g. my-payment-v2" autocomplete="off">
+                </label>
+                <label>Description
+                    <input name="description" placeholder="Short description" autocomplete="off">
+                </label>
+                <label>Job type
+                    <select name="jobType" id="appJobType" required>
+                        <option value="jenkins" selected>Jenkins job</option>
+                        <option value="azure_cicd">Azure CI/CD</option>
+                        <option value="other">Other</option>
+                    </select>
+                </label>
+                <label class="cd-only">Exposure
+                    <select name="exposure" id="appExposure">
+                        <option value="external" selected>External (LoadBalancer)</option>
+                        <option value="internal">Internal</option>
+                    </select>
+                </label>
+                <label>
+                    <span id="appJobNameLabelText">Jenkins job</span>
+                    <input name="jenkinsJob" id="appJenkinsJob" required
+                           placeholder="e.g. common-build-job" autocomplete="off">
+                </label>
+                <label>Jenkins APPLICATION
+                    <span class="field-hint" id="appJenkinsApplicationHint">common-build-job APPLICATION: payment-app, order-app, customer-portal-api.</span>
+                    <input name="jenkinsApplication" id="appJenkinsApplication" required
+                           placeholder="e.g. payment-app" autocomplete="off">
+                </label>
+                <label class="ci-only">IMAGE_VERSION
+                    <span class="field-hint">Version tag for common-build-job (semver, e.g. 1.0.1). Used when you click Build.</span>
+                    <input name="imageVersion" id="appImageVersion"
+                           placeholder="e.g. 1.0.1" value="1.0.1" autocomplete="off">
+                </label>
+                <p class="field-hint field-span-2" id="appJobTypeHint">
+                    Build trigger: Jenkins common-build-job (APPLICATION + IMAGE_VERSION).
+                </p>
+                <p class="field-hint field-span-2 cd-only" id="appExposureHint">
+                    External apps use a LoadBalancer job; internal apps use a private/internal job.
+                </p>
+                <p class="field-hint field-span-2" id="appPhaseHint">
+                    Build (CI) matches common-build-job parameters: APPLICATION + IMAGE_VERSION.
+                </p>
+                <label class="cd-only">CONTAINER_PORT
+                    <span class="field-hint">Container port; leave blank to use the application default</span>
+                    <input name="containerPort" type="number" min="1" max="65535" step="1"
+                           placeholder="e.g. 8080" autocomplete="off" inputmode="numeric">
+                </label>
+                <label class="cd-only">SERVICE_PORT
+                    <span class="field-hint">Kubernetes Service port; leave blank to use the application default</span>
+                    <input name="servicePort" type="number" min="1" max="65535" step="1"
+                           placeholder="e.g. 80" autocomplete="off" inputmode="numeric">
+                </label>
+                <label class="field-span-2 cd-only">Health URL
+                    <input name="healthUrl" id="appHealthUrl" placeholder="http://host/actuator/prometheus" autocomplete="off">
+                </label>
+                <label class="cd-only">Cluster (rollback default)
+                    <input name="cluster" placeholder="e.g. payment-app-cluster" autocomplete="off">
+                </label>
+                <label class="cd-only">Namespace (rollback default)
+                    <input name="namespace" placeholder="e.g. payment-app" autocomplete="off">
+                </label>
+            </div>
+            <p class="modal-error" id="appFormError"></p>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" id="appFormCancel">Cancel</button>
+                <button type="submit" class="btn-save" id="appFormSave">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="buildModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-labelledby="buildTitle">
+        <h3 id="buildTitle">Build application</h3>
+        <p class="modal-hint">Triggers Jenkins <strong>common-build-job</strong> with APPLICATION and IMAGE_VERSION.</p>
+        <form id="buildForm">
+            <input type="hidden" name="catalogName" id="buildCatalogName" value="">
+            <div class="modal-fields">
+                <label>IMAGE_VERSION
+                    <span class="field-hint">Semver tag pushed to the registry (e.g. 1.0.1)</span>
+                    <input name="imageVersion" id="buildImageVersion" required
+                           placeholder="e.g. 1.0.1" value="1.0.1" autocomplete="off">
+                </label>
+                <label>APPLICATION
+                    <input name="jenkinsApplication" id="buildJenkinsApplication" readonly tabindex="-1">
+                </label>
+                <label>Catalog name
+                    <input name="displayName" id="buildDisplayName" readonly tabindex="-1">
+                </label>
+                <label>Jenkins job
+                    <input name="jenkinsJob" id="buildJenkinsJob" readonly tabindex="-1">
+                </label>
+            </div>
+            <p class="modal-error" id="buildError"></p>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" id="buildCancel">Cancel</button>
+                <button type="submit" class="btn-save" id="buildSubmit">Run build</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="rollbackModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-labelledby="rollbackTitle">
+        <h3 id="rollbackTitle">Rollback application</h3>
+        <p class="modal-hint">Triggers Jenkins <strong>common-rollback-job</strong> with CLUSTER, APP_NAME, IMAGE_VERSION, NAMESPACE.</p>
+        <form id="rollbackForm">
+            <div class="modal-fields">
+                <label>CLUSTER
+                    <input name="cluster" required placeholder="e.g. payment-app-cluster" autocomplete="off">
+                </label>
+                <label>APP_NAME
+                    <input name="appName" required placeholder="e.g. payment-app" autocomplete="off">
+                </label>
+                <label>IMAGE_VERSION
+                    <input name="imageVersion" required placeholder="e.g. 1.0.4" autocomplete="off">
+                </label>
+                <label>NAMESPACE
+                    <input name="namespace" required placeholder="e.g. payment-app" autocomplete="off">
+                </label>
+            </div>
+            <p class="modal-error" id="rollbackError"></p>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" id="rollbackCancel">Cancel</button>
+                <button type="submit" class="btn-save" id="rollbackSubmit">Run rollback</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="removeConfirmModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-labelledby="removeConfirmTitle" aria-describedby="removeConfirmMsg">
+        <h3 id="removeConfirmTitle">Remove application?</h3>
+        <p class="modal-hint" id="removeConfirmMsg">
+            Remove <span class="confirm-remove-name" id="removeConfirmName"></span> from applications.json?
+            Type the Jenkins job name
+            <span class="confirm-remove-job" id="removeConfirmJob"></span>
+            to confirm. This cannot be undone.
+        </p>
+        <label class="remove-confirm-field">
+            Jenkins job name
+            <input type="text" id="removeConfirmInput" autocomplete="off" spellcheck="false"
+                   placeholder="Type job name to confirm">
+        </label>
+        <p class="modal-error" id="removeConfirmError"></p>
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" id="removeConfirmCancel">Cancel</button>
+            <button type="button" class="btn-danger" id="removeConfirmOk" disabled>Remove</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="jenkinsSettingsModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-labelledby="jenkinsSettingsTitle" aria-modal="true">
+        <h3 id="jenkinsSettingsTitle">Jenkins connection</h3>
+        <p class="modal-hint">
+            Test the connection, Apply to save a draft to the database, then Save to close.
+            Leave token blank to keep the current value.
+        </p>
+        <form id="jenkinsSettingsForm">
+            <div class="modal-fields">
+                <label>Jenkins URL
+                    <input name="jenkinsUrl" id="jenkinsUrlInput" required
+                           placeholder="http://172.18.199.100:8080" autocomplete="off">
+                </label>
+                <label>Username
+                    <input name="jenkinsUser" id="jenkinsUserInput" required
+                           placeholder="jenkins user" autocomplete="username">
+                </label>
+                <label>API token
+                    <span class="field-hint" id="jenkinsTokenHint">Enter a new token, or leave blank to keep existing.</span>
+                    <input name="jenkinsToken" id="jenkinsTokenInput" type="password"
+                           placeholder="••••••••" autocomplete="new-password">
+                </label>
+            </div>
+            <p class="modal-error" id="jenkinsSettingsError" role="status"></p>
+            <div class="modal-actions jenkins-actions">
+                <div class="jenkins-actions-left">
+                    <button type="button" class="btn-secondary" id="jenkinsSettingsTest">Test connection</button>
+                </div>
+                <div class="jenkins-actions-right">
+                    <button type="button" class="btn-cancel" id="jenkinsSettingsCancel">Cancel</button>
+                    <button type="button" class="btn-secondary" id="jenkinsSettingsApply">Apply</button>
+                    <button type="submit" class="btn-save" id="jenkinsSettingsSave">Save</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    const APP_CATALOG = /*[[${applications}]]*/ [];
+</script>
+<script>
+    function csrfHeaders(extra) {
+        const headers = Object.assign({}, extra || {});
+        const tokenMeta = document.querySelector('meta[name="_csrf"]');
+        const headerMeta = document.querySelector('meta[name="_csrf_header"]');
+        if (tokenMeta && headerMeta && tokenMeta.content && headerMeta.content) {
+            headers[headerMeta.content] = tokenMeta.content;
+        }
+        return headers;
+    }
+
+    (function () {
+        const root = document.documentElement;
+        const toggleBtn = document.getElementById('themeToggle');
+        const stored = localStorage.getItem('deploy-agent-theme');
+        const initial = stored === 'dark' || stored === 'light' ? stored : 'light';
+
+        function applyTheme(theme) {
+            root.setAttribute('data-theme', theme);
+            localStorage.setItem('deploy-agent-theme', theme);
+            toggleBtn.setAttribute(
+                'aria-label',
+                theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'
+            );
+            toggleBtn.title = theme === 'light' ? 'Dark mode' : 'Light mode';
+        }
+
+        applyTheme(initial);
+        toggleBtn.addEventListener('click', function () {
+            const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            applyTheme(next);
+        });
+    })();
+
+    (function () {
+        const workspace = document.getElementById('workspace');
+        const menuPanel = document.getElementById('menuPanel');
+        const chatPanel = document.getElementById('chatPanel');
+        const splitLeft = document.getElementById('splitLeft');
+        const splitRight = document.getElementById('splitRight');
+        const STORAGE_KEY = 'deploy-agent-panel-widths';
+        const MIN_LEFT = 140;
+        const MIN_MID = 360;
+        const MIN_RIGHT = 180;
+
+        function splitterReserve() {
+            // two splitters (~4px) + margins
+            return 16;
+        }
+
+        function clampPanels() {
+            if (window.matchMedia('(max-width: 900px)').matches) return;
+            const total = workspace.getBoundingClientRect().width;
+            let left = menuPanel.getBoundingClientRect().width;
+            let right = chatPanel.getBoundingClientRect().width;
+            const reserve = splitterReserve();
+            const maxRight = Math.max(MIN_RIGHT, total - left - reserve - MIN_MID);
+            const maxLeft = Math.max(MIN_LEFT, total - right - reserve - MIN_MID);
+            right = Math.max(MIN_RIGHT, Math.min(maxRight, right));
+            left = Math.max(MIN_LEFT, Math.min(maxLeft, left));
+            // Re-check right after left clamp so middle always keeps MIN_MID
+            const maxRight2 = Math.max(MIN_RIGHT, total - left - reserve - MIN_MID);
+            right = Math.max(MIN_RIGHT, Math.min(maxRight2, right));
+            menuPanel.style.width = Math.round(left) + 'px';
+            chatPanel.style.width = Math.round(right) + 'px';
+        }
+
+        function loadWidths() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                if (parsed.left) menuPanel.style.width = parsed.left + 'px';
+                if (parsed.right) chatPanel.style.width = parsed.right + 'px';
+            } catch (e) { /* ignore */ }
+            clampPanels();
+        }
+
+        function saveWidths() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                left: Math.round(menuPanel.getBoundingClientRect().width),
+                right: Math.round(chatPanel.getBoundingClientRect().width)
+            }));
+        }
+
+        function bindSplitter(splitter, mode) {
+            splitter.addEventListener('mousedown', function (e) {
+                if (window.matchMedia('(max-width: 900px)').matches) return;
+                e.preventDefault();
+                splitter.classList.add('active');
+                workspace.classList.add('resizing');
+
+                const startX = e.clientX;
+                const startLeft = menuPanel.getBoundingClientRect().width;
+                const startRight = chatPanel.getBoundingClientRect().width;
+                const total = workspace.getBoundingClientRect().width;
+                const reserve = splitterReserve();
+
+                function onMove(ev) {
+                    const dx = ev.clientX - startX;
+                    if (mode === 'left') {
+                        let nextLeft = startLeft + dx;
+                        const maxLeft = total - startRight - reserve - MIN_MID;
+                        nextLeft = Math.max(MIN_LEFT, Math.min(maxLeft, nextLeft));
+                        menuPanel.style.width = nextLeft + 'px';
+                    } else {
+                        let nextRight = startRight - dx;
+                        const maxRight = total - startLeft - reserve - MIN_MID;
+                        nextRight = Math.max(MIN_RIGHT, Math.min(maxRight, nextRight));
+                        chatPanel.style.width = nextRight + 'px';
+                    }
+                }
+
+                function onUp() {
+                    splitter.classList.remove('active');
+                    workspace.classList.remove('resizing');
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                    clampPanels();
+                    saveWidths();
+                }
+
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            });
+        }
+
+        loadWidths();
+        bindSplitter(splitLeft, 'left');
+        bindSplitter(splitRight, 'right');
+        window.addEventListener('resize', function () {
+            clampPanels();
+        });
+    })();
+
+    const chat = document.getElementById('chat');
+    const form = document.getElementById('chatForm');
+    const loading = document.getElementById('loading');
+    const secondsEl = document.getElementById('seconds');
+
+    function parseDeployResult(text) {
+        if (!text) return null;
+        const block = text.match(/<<<DEPLOY_RESULT>>>\s*([\s\S]*?)\s*<<<END_DEPLOY_RESULT>>>/);
+        if (block) {
+            try {
+                return JSON.parse(block[1].trim());
+            } catch (e) { /* fall through */ }
+        }
+        const status = (text.match(/\bstatus\s*[:=]\s*(SUCCESS|FAILED)/i) || [])[1];
+        if (!status) return null;
+        const application = (text.match(/\bapplication\s*[:=]\s*([^\s\n]+)/i) || [])[1];
+        const job = (text.match(/\bjob(?:Name)?\s*[:=]\s*([^\s\n]+)/i) || [])[1];
+        const exitCode = (text.match(/\bexitCode\s*[:=]\s*(-?\d+)/i) || [])[1];
+        const workingDir = (text.match(/\bworkingDir\s*[:=]\s*(.+)/i) || [])[1];
+        if (!application && !job) return null;
+        const ok = String(status).toUpperCase() === 'SUCCESS';
+        const app = application || job || 'application';
+        return {
+            ok: ok,
+            title: ok ? ('Deployed ' + app + ' successfully') : ('Deployment of ' + app + ' failed'),
+            application: app,
+            job: job || app,
+            status: String(status).toUpperCase(),
+            exitCode: exitCode != null ? Number(exitCode) : (ok ? 0 : 1),
+            workingDir: workingDir ? workingDir.trim() : '',
+            added: ok ? 1 : 0,
+            changed: 0,
+            destroyed: ok ? 1 : 0
+        };
+    }
+
+    function buildDeployResultCard(data) {
+        const ok = !!data.ok || String(data.status || '').toUpperCase() === 'SUCCESS';
+        const card = document.createElement('div');
+        card.className = 'deploy-result-card ' + (ok ? 'success' : 'failed');
+        card.setAttribute('data-enhanced-deploy', '1');
+
+        const header = document.createElement('div');
+        header.className = 'deploy-result-header';
+        const icon = document.createElement('span');
+        icon.className = 'deploy-result-icon';
+        icon.textContent = ok ? '✓' : '✕';
+        const title = document.createElement('h3');
+        title.textContent = data.title || (ok
+            ? ('Deployed ' + (data.application || data.job || 'application') + ' successfully')
+            : ('Deployment failed'));
+        header.appendChild(icon);
+        header.appendChild(title);
+        card.appendChild(header);
+
+        const meta = document.createElement('div');
+        meta.className = 'deploy-result-meta';
+        const rows = [
+            ['Job status', data.status || (ok ? 'SUCCESS' : 'FAILED')],
+            ['Job name', data.job || data.application || '—'],
+            ['Exit code', String(data.exitCode != null ? data.exitCode : (ok ? 0 : 1))],
+            ['Working directory', data.workingDir || '—']
+        ];
+        if (data.cluster) rows.splice(2, 0, ['Cluster', data.cluster]);
+        if (data.imageVersion) rows.splice(data.cluster ? 3 : 2, 0, ['Image version', data.imageVersion]);
+        if (data.namespace) rows.push(['Namespace', data.namespace]);
+        rows.forEach(function (pair) {
+            const row = document.createElement('div');
+            row.className = 'deploy-result-row';
+            const dt = document.createElement('dt');
+            dt.textContent = pair[0];
+            const dd = document.createElement('dd');
+            dd.textContent = pair[1];
+            dd.title = pair[1];
+            row.appendChild(dt);
+            row.appendChild(dd);
+            meta.appendChild(row);
+        });
+        card.appendChild(meta);
+
+        const badges = document.createElement('div');
+        badges.className = 'deploy-result-badges';
+        const added = Number(data.added != null ? data.added : (ok ? 1 : 0));
+        const destroyed = Number(data.destroyed != null ? data.destroyed : (ok ? 1 : 0));
+        const changed = Number(data.changed != null ? data.changed : 0);
+        [
+            ['added', '+' + added + ' added'],
+            ['destroyed', '-' + destroyed + ' destroyed'],
+            ['changed', changed + ' changed']
+        ].forEach(function (item) {
+            const badge = document.createElement('span');
+            badge.className = 'deploy-badge ' + item[0];
+            badge.textContent = item[1];
+            badges.appendChild(badge);
+        });
+        card.appendChild(badges);
+        return card;
+    }
+
+    function enhanceDeployResultMessages() {
+        if (!chat) return;
+        chat.querySelectorAll('.msg.assistant').forEach(function (el) {
+            if (el.dataset.enhancedDeploy === '1') return;
+            const data = parseDeployResult(el.textContent || '');
+            if (!data) return;
+            const card = buildDeployResultCard(data);
+            el.replaceWith(card);
+        });
+    }
+
+    enhanceDeployResultMessages();
+    const sendBtn = document.getElementById('sendBtn');
+    const messageInput = document.getElementById('messageInput');
+    const messageHidden = document.getElementById('messageHidden');
+    const emptyHint = document.getElementById('emptyHint');
+
+    function clearComposer() {
+        if (messageInput) {
+            messageInput.value = '';
+            messageInput.readOnly = false;
+        }
+        if (messageHidden) messageHidden.value = '';
+    }
+
+    let approvalGranted = false;
+    let buildApprovalGranted = false;
+    let rollbackApprovalGranted = false;
+    let confirmCard = null;
+
+    chat.scrollTop = chat.scrollHeight;
+
+    function isRollbackIntent(text) {
+        const t = (text || '').toLowerCase();
+        return t.includes('rollback') || t.includes('roll back') || t.includes('roll-back');
+    }
+
+    function isBuildIntent(text) {
+        if (isRollbackIntent(text)) return false;
+        const t = (text || '').toLowerCase();
+        return /\bbuild\b/.test(t) || t.includes('common-build-job');
+    }
+
+    function isDeployIntent(text) {
+        if (isRollbackIntent(text) || isBuildIntent(text)) return false;
+        const t = (text || '').toLowerCase();
+        return t.includes('deploy') || t.includes('jenkins');
+    }
+
+    function appPhaseId(app) {
+        if (!app) return 'deploy';
+        if (typeof app.phase === 'string') return app.phase;
+        if (app.phase && app.phase.id) return String(app.phase.id);
+        return 'deploy';
+    }
+
+    function isBuildCatalogApp(app) {
+        return appPhaseId(app) === 'build';
+    }
+
+    function selectedAppName() {
+        if (!confirmCard) return null;
+        const checked = confirmCard.querySelector('input[name="confirmApp"]:checked');
+        return checked ? checked.value : null;
+    }
+
+    function findAppInCatalog(name) {
+        const apps = Array.isArray(APP_CATALOG) ? APP_CATALOG : [];
+        if (!name) return null;
+        const needle = String(name).toLowerCase();
+        return apps.find(function (a) {
+            return String(a.name).toLowerCase() === needle;
+        }) || null;
+    }
+
+    function extractAppFromRollbackMessage(text) {
+        const m = String(text || '').match(/roll[\s-]?back\s+([a-zA-Z0-9._-]+)/i);
+        return m ? m[1] : null;
+    }
+
+    function extractImageVersion(text) {
+        const m = String(text || '').match(/(?:image(?:\s+version)?|version|to)\s*[:=]?\s*([0-9]+(?:\.[0-9]+){1,3})/i);
+        return m ? m[1] : null;
+    }
+
+    function removeConfirmCard() {
+        if (confirmCard && confirmCard.parentNode) {
+            confirmCard.parentNode.removeChild(confirmCard);
+        }
+        confirmCard = null;
+        sendBtn.disabled = false;
+        sendBtn.title = 'Send';
+    }
+
+    function appendAssistantNote(text, extraClass) {
+        if (emptyHint) emptyHint.style.display = 'none';
+        const note = document.createElement('div');
+        note.className = 'msg assistant' + (extraClass ? ' ' + extraClass : '');
+        note.textContent = text;
+        chat.insertBefore(note, loading);
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function showConfirmCard(preselectApp) {
+        removeConfirmCard();
+        approvalGranted = false;
+        buildApprovalGranted = false;
+
+        const apps = (Array.isArray(APP_CATALOG) ? APP_CATALOG : []).filter(function (a) {
+            return !isBuildCatalogApp(a);
+        });
+        if (apps.length === 0) {
+            appendAssistantNote('No Deploy (CD) applications are registered to approve.');
+            return;
+        }
+
+        if (emptyHint) emptyHint.style.display = 'none';
+
+        // Use last manually refreshed badge text only — never auto-call health API here
+        let healthByName = {};
+        document.querySelectorAll('[data-health-for]').forEach(function (badge) {
+            const name = badge.getAttribute('data-health-for');
+            const text = (badge.textContent || '').trim().toUpperCase();
+            if (name && (text === 'UP' || text === 'DOWN')) {
+                healthByName[name] = text;
+            } else if (name) {
+                healthByName[name] = 'UNKNOWN';
+            }
+        });
+
+        const card = document.createElement('div');
+        card.className = 'confirm-card';
+        card.setAttribute('role', 'dialog');
+        card.setAttribute('aria-label', 'Approve deployment');
+
+        const title = document.createElement('h3');
+        title.textContent = 'Choose application & confirm';
+        card.appendChild(title);
+
+        const help = document.createElement('p');
+        help.textContent = 'If health is DOWN, nothing runs unless you Approve. Cancel aborts with no deploy.';
+        card.appendChild(help);
+
+        const warn = document.createElement('p');
+        warn.id = 'confirmDownWarn';
+        warn.style.display = 'none';
+        warn.style.color = '#842029';
+        warn.textContent = 'Selected app is DOWN. Approve is required — no automatic rollback will run.';
+        card.appendChild(warn);
+
+        const options = document.createElement('div');
+        options.className = 'confirm-options';
+
+        let defaultName = preselectApp;
+        if (!defaultName && messageInput.value) {
+            const match = apps.find(function (a) {
+                return messageInput.value.toLowerCase().includes(String(a.name).toLowerCase());
+            });
+            if (match) defaultName = match.name;
+        }
+        if (!defaultName) defaultName = apps[0].name;
+
+        function refreshDownWarn() {
+            const name = selectedAppName();
+            const status = healthByName[name] || 'UNKNOWN';
+            warn.style.display = status === 'DOWN' ? 'block' : 'none';
+        }
+
+        apps.forEach(function (app, idx) {
+            const label = document.createElement('label');
+            label.className = 'confirm-option';
+
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'confirmApp';
+            radio.value = app.name;
+            radio.checked = app.name === defaultName || (!defaultName && idx === 0);
+            radio.addEventListener('change', refreshDownWarn);
+
+            const status = healthByName[app.name] || 'UNKNOWN';
+            const body = document.createElement('span');
+            const nameEl = document.createElement('span');
+            nameEl.className = 'opt-name';
+            nameEl.textContent = app.name + ' [' + status + ']';
+            const meta = document.createElement('span');
+            meta.className = 'opt-meta';
+            meta.textContent = app.jenkinsJob + ' — ' + app.description;
+            body.appendChild(nameEl);
+            body.appendChild(meta);
+
+            label.appendChild(radio);
+            label.appendChild(body);
+            options.appendChild(label);
+        });
+        card.appendChild(options);
+
+        const actions = document.createElement('div');
+        actions.className = 'confirm-actions';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'btn-cancel';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', function () {
+            removeConfirmCard();
+            approvalGranted = false;
+            messageInput.value = '';
+            appendAssistantNote('Cancelled. No deploy was started.', 'system-cancel');
+        });
+
+        const approveBtn = document.createElement('button');
+        approveBtn.type = 'button';
+        approveBtn.className = 'btn-approve';
+        approveBtn.textContent = 'Approve';
+        approveBtn.addEventListener('click', function () {
+            const appName = selectedAppName();
+            if (!appName) return;
+            const status = healthByName[appName] || 'UNKNOWN';
+            messageInput.value = 'Deploy ' + appName + ' via Jenkins (approved)';
+            approvalGranted = true;
+            removeConfirmCard();
+            if (status === 'DOWN') {
+                appendAssistantNote('Approved despite DOWN health for ' + appName + '. Click Send (>) to deploy. No rollback will run.');
+            } else {
+                appendAssistantNote('Approved: ' + appName + '. Click Send (>) to continue.');
+            }
+            messageInput.focus();
+            sendBtn.disabled = false;
+            sendBtn.title = 'Send approved deploy';
+        });
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(approveBtn);
+        card.appendChild(actions);
+
+        confirmCard = card;
+        chat.insertBefore(card, loading);
+        chat.scrollTop = chat.scrollHeight;
+        refreshDownWarn();
+
+        // Block send until Approve
+        sendBtn.disabled = true;
+        sendBtn.title = 'Approve or Cancel first';
+        messageInput.value = 'Deploy ' + defaultName + ' via Jenkins';
+    }
+
+    async function showBuildConfirmCard(preselectApp) {
+        removeConfirmCard();
+        approvalGranted = false;
+        buildApprovalGranted = false;
+        rollbackApprovalGranted = false;
+
+        const apps = (Array.isArray(APP_CATALOG) ? APP_CATALOG : []).filter(isBuildCatalogApp);
+        if (apps.length === 0) {
+            appendAssistantNote('No Build (CI) applications are registered. Add a catalog entry with Phase = Build (CI).');
+            return;
+        }
+
+        if (emptyHint) emptyHint.style.display = 'none';
+
+        let defaultName = preselectApp;
+        if (!defaultName && messageInput.value) {
+            const match = apps.find(function (a) {
+                return messageInput.value.toLowerCase().includes(String(a.name).toLowerCase());
+            });
+            if (match) defaultName = match.name;
+        }
+        if (!defaultName) defaultName = apps[0].name;
+
+        const defaultApp = findAppInCatalog(defaultName) || apps[0];
+        const guessedVersion = extractImageVersion(messageInput.value)
+            || (defaultApp && defaultApp.imageVersion)
+            || '1.0.1';
+
+        const card = document.createElement('div');
+        card.className = 'confirm-card';
+        card.setAttribute('role', 'dialog');
+        card.setAttribute('aria-label', 'Approve build');
+
+        const title = document.createElement('h3');
+        title.textContent = 'Build via common-build-job';
+        card.appendChild(title);
+
+        const help = document.createElement('p');
+        help.textContent = 'Choose a Build (CI) app, set IMAGE_VERSION, then Approve. Send runs the Jenkins build through AI chat.';
+        card.appendChild(help);
+
+        const options = document.createElement('div');
+        options.className = 'confirm-options';
+
+        const fields = document.createElement('div');
+        fields.className = 'confirm-fields';
+
+        const versionLabel = document.createElement('label');
+        versionLabel.textContent = 'IMAGE_VERSION';
+        const versionInput = document.createElement('input');
+        versionInput.name = 'imageVersion';
+        versionInput.value = guessedVersion;
+        versionInput.placeholder = 'e.g. 1.0.11';
+        versionInput.autocomplete = 'off';
+        versionLabel.appendChild(versionInput);
+        fields.appendChild(versionLabel);
+
+        const metaHint = document.createElement('p');
+        metaHint.className = 'confirm-error';
+        metaHint.style.display = 'block';
+        metaHint.style.color = 'var(--muted)';
+        metaHint.style.margin = '0';
+
+        function refreshMeta() {
+            const app = findAppInCatalog(selectedAppName()) || {};
+            const jenkinsApp = app.jenkinsApplication || app.name || '?';
+            const job = app.jenkinsJob || 'common-build-job';
+            metaHint.textContent = 'APPLICATION=' + jenkinsApp + ' · job=' + job;
+            if (app.imageVersion && !versionInput.dataset.touched) {
+                versionInput.value = app.imageVersion;
+            }
+        }
+
+        versionInput.addEventListener('input', function () {
+            versionInput.dataset.touched = '1';
+        });
+
+        apps.forEach(function (app, idx) {
+            const label = document.createElement('label');
+            label.className = 'confirm-option';
+
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'confirmApp';
+            radio.value = app.name;
+            radio.checked = app.name === defaultName || (!defaultName && idx === 0);
+            radio.addEventListener('change', refreshMeta);
+
+            const body = document.createElement('span');
+            const nameEl = document.createElement('span');
+            nameEl.className = 'opt-name';
+            nameEl.textContent = app.name;
+            const meta = document.createElement('span');
+            meta.className = 'opt-meta';
+            meta.textContent = (app.jenkinsJob || 'common-build-job')
+                + ' · APPLICATION=' + (app.jenkinsApplication || app.name);
+            body.appendChild(nameEl);
+            body.appendChild(meta);
+
+            label.appendChild(radio);
+            label.appendChild(body);
+            options.appendChild(label);
+        });
+        card.appendChild(options);
+        card.appendChild(fields);
+        card.appendChild(metaHint);
+
+        const err = document.createElement('p');
+        err.className = 'confirm-error';
+        card.appendChild(err);
+
+        const actions = document.createElement('div');
+        actions.className = 'confirm-actions';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'btn-cancel';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', function () {
+            removeConfirmCard();
+            buildApprovalGranted = false;
+            messageInput.value = '';
+            appendAssistantNote('Cancelled. No build was started.', 'system-cancel');
+        });
+
+        const approveBtn = document.createElement('button');
+        approveBtn.type = 'button';
+        approveBtn.className = 'btn-approve';
+        approveBtn.textContent = 'Approve';
+        approveBtn.addEventListener('click', function () {
+            const appName = selectedAppName();
+            const imageVersion = (versionInput.value || '').trim();
+            err.textContent = '';
+            err.classList.remove('visible');
+            if (!appName) return;
+            if (!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(imageVersion)) {
+                err.textContent = 'IMAGE_VERSION must look like 1.0.1';
+                err.classList.add('visible');
+                return;
+            }
+            messageInput.value = 'Build ' + appName
+                + ' IMAGE_VERSION=' + imageVersion
+                + ' via Jenkins (approved)';
+            buildApprovalGranted = true;
+            removeConfirmCard();
+            appendAssistantNote('Approved build for ' + appName + ' @ ' + imageVersion + '. Click Send (>) to continue.');
+            messageInput.focus();
+            sendBtn.disabled = false;
+            sendBtn.title = 'Send approved build';
+        });
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(approveBtn);
+        card.appendChild(actions);
+
+        confirmCard = card;
+        chat.insertBefore(card, loading);
+        chat.scrollTop = chat.scrollHeight;
+        refreshMeta();
+
+        sendBtn.disabled = true;
+        sendBtn.title = 'Approve or Cancel build first';
+        messageInput.value = 'Build ' + defaultName + ' via Jenkins';
+        versionInput.focus();
+        versionInput.select();
+
+        const chatPanelEl = document.getElementById('chatPanel');
+        if (chatPanelEl) chatPanelEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    async function showRollbackConfirmCard(preselectApp) {
+        removeConfirmCard();
+        approvalGranted = false;
+        rollbackApprovalGranted = false;
+
+        const apps = Array.isArray(APP_CATALOG) ? APP_CATALOG : [];
+        if (apps.length === 0) {
+            appendAssistantNote('No applications are registered to roll back.');
+            return;
+        }
+
+        if (emptyHint) emptyHint.style.display = 'none';
+
+        let defaultName = preselectApp || extractAppFromRollbackMessage(messageInput.value);
+        if (!defaultName && messageInput.value) {
+            const match = apps.find(function (a) {
+                return messageInput.value.toLowerCase().includes(String(a.name).toLowerCase());
+            });
+            if (match) defaultName = match.name;
+        }
+        if (!defaultName) defaultName = apps[0].name;
+
+        const guessedVersion = extractImageVersion(messageInput.value) || '';
+
+        const card = document.createElement('div');
+        card.className = 'confirm-card';
+        card.setAttribute('role', 'dialog');
+        card.setAttribute('aria-label', 'Approve rollback');
+
+        const title = document.createElement('h3');
+        title.textContent = 'Rollback via common-rollback-job';
+        card.appendChild(title);
+
+        const help = document.createElement('p');
+        help.textContent = 'Choose the app, fill CLUSTER / IMAGE_VERSION / NAMESPACE, then Approve to trigger Jenkins.';
+        card.appendChild(help);
+
+        const options = document.createElement('div');
+        options.className = 'confirm-options';
+
+        const fields = document.createElement('div');
+        fields.className = 'confirm-fields';
+
+        function field(name, labelText, value, placeholder) {
+            const label = document.createElement('label');
+            label.textContent = labelText;
+            const input = document.createElement('input');
+            input.name = name;
+            input.value = value || '';
+            input.placeholder = placeholder || '';
+            input.autocomplete = 'off';
+            label.appendChild(input);
+            fields.appendChild(label);
+            return input;
+        }
+
+        const clusterInput = field('cluster', 'CLUSTER', '', 'e.g. payment-app-cluster');
+        const versionInput = field('imageVersion', 'IMAGE_VERSION', guessedVersion, 'e.g. 1.0.4');
+        const namespaceInput = field('namespace', 'NAMESPACE', '', 'e.g. payment-app');
+
+        function applyAppDefaults(appName) {
+            const app = findAppInCatalog(appName) || {};
+            clusterInput.value = app.cluster || '';
+            namespaceInput.value = app.namespace || '';
+            if (!versionInput.value) versionInput.value = guessedVersion;
+        }
+
+        apps.forEach(function (app, idx) {
+            const label = document.createElement('label');
+            label.className = 'confirm-option';
+
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'confirmApp';
+            radio.value = app.name;
+            radio.checked = app.name === defaultName || (!defaultName && idx === 0);
+            radio.addEventListener('change', function () {
+                applyAppDefaults(app.name);
+            });
+
+            const body = document.createElement('span');
+            const nameEl = document.createElement('span');
+            nameEl.className = 'opt-name';
+            nameEl.textContent = app.name;
+            const meta = document.createElement('span');
+            meta.className = 'opt-meta';
+            meta.textContent = (app.cluster || 'cluster?') + ' / ' + (app.namespace || 'namespace?');
+            body.appendChild(nameEl);
+            body.appendChild(meta);
+
+            label.appendChild(radio);
+            label.appendChild(body);
+            options.appendChild(label);
+        });
+        card.appendChild(options);
+        card.appendChild(fields);
+        applyAppDefaults(defaultName);
+
+        const err = document.createElement('p');
+        err.className = 'confirm-error';
+        card.appendChild(err);
+
+        const actions = document.createElement('div');
+        actions.className = 'confirm-actions';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'btn-cancel';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', function () {
+            removeConfirmCard();
+            rollbackApprovalGranted = false;
+            messageInput.value = '';
+            appendAssistantNote('Cancelled. No rollback was started.', 'system-cancel');
+        });
+
+        const approveBtn = document.createElement('button');
+        approveBtn.type = 'button';
+        approveBtn.className = 'btn-approve';
+        approveBtn.textContent = 'Approve rollback';
+        approveBtn.addEventListener('click', async function () {
+            const appName = selectedAppName();
+            const payload = {
+                cluster: (clusterInput.value || '').trim(),
+                appName: (appName || '').trim(),
+                imageVersion: (versionInput.value || '').trim(),
+                namespace: (namespaceInput.value || '').trim()
+            };
+            err.textContent = '';
+            err.classList.remove('visible');
+            if (!payload.cluster || !payload.appName || !payload.imageVersion || !payload.namespace) {
+                err.textContent = 'CLUSTER, APP_NAME, IMAGE_VERSION, and NAMESPACE are all required.';
+                err.classList.add('visible');
+                return;
+            }
+
+            rollbackApprovalGranted = true;
+            removeConfirmCard();
+            const approvedText = 'Rollback ' + payload.appName
+                + ' cluster=' + payload.cluster
+                + ' image=' + payload.imageVersion
+                + ' namespace=' + payload.namespace
+                + ' (approved)';
+            clearComposer();
+
+            const userBubble = document.createElement('div');
+            userBubble.className = 'msg user';
+            userBubble.textContent = approvedText;
+            chat.insertBefore(userBubble, loading);
+
+            appendAssistantNote('Approved rollback for ' + payload.appName + '. Running common-rollback-job…');
+            if (emptyHint) emptyHint.style.display = 'none';
+            loading.classList.add('visible');
+            form.classList.add('busy');
+            sendBtn.disabled = true;
+            sendBtn.classList.add('busy');
+            setBadgeState(payload.appName, 'deploying', 'Rollback in progress');
+
+            try {
+                const res = await fetch('/api/rollback', {
+                    method: 'POST',
+                    headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify(payload)
+                });
+                const body = await res.json().catch(function () { return {}; });
+                if (!res.ok) {
+                    throw new Error(body.error || body.result || ('HTTP ' + res.status));
+                }
+
+                const block = body.deployResultBlock || body.result || '';
+                const dataCard = parseDeployResult(block);
+                if (dataCard) {
+                    chat.insertBefore(buildDeployResultCard(dataCard), loading);
+                } else {
+                    appendAssistantNote(body.result || 'Rollback finished.');
+                }
+                setBadgeState(payload.appName, 'deployed', 'Rollback finished — click Refresh health');
+            } catch (ex) {
+                appendAssistantNote('Rollback failed: ' + (ex.message || ex));
+                setBadgeState(payload.appName, 'unknown', String(ex));
+            } finally {
+                clearComposer();
+                loading.classList.remove('visible');
+                form.classList.remove('busy');
+                sendBtn.disabled = false;
+                sendBtn.classList.remove('busy');
+                sendBtn.title = 'Send';
+                rollbackApprovalGranted = false;
+                chat.scrollTop = chat.scrollHeight;
+            }
+        });
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(approveBtn);
+        card.appendChild(actions);
+
+        confirmCard = card;
+        chat.insertBefore(card, loading);
+        chat.scrollTop = chat.scrollHeight;
+
+        sendBtn.disabled = true;
+        sendBtn.title = 'Approve or Cancel rollback first';
+        messageInput.value = 'Rollback ' + defaultName
+            + (guessedVersion ? (' to ' + guessedVersion) : '');
+        versionInput.focus();
+    }
+
+    const DEPLOY_STATE_KEY = 'deploy-agent-deploy-state';
+
+    function extractAppFromDeployMessage(text) {
+        const m = String(text || '').match(/deploy\s+([a-zA-Z0-9._-]+)/i);
+        return m ? m[1] : null;
+    }
+
+    function extractAppFromBuildMessage(text) {
+        const m = String(text || '').match(/build\s+([a-zA-Z0-9._-]+)/i);
+        return m ? m[1] : null;
+    }
+
+    window.__deployLockedApps = window.__deployLockedApps || new Set();
+
+    function setBadgeState(appName, state, title) {
+        if (!appName) return;
+        document.querySelectorAll('[data-health-for="' + appName + '"]').forEach(function (badge) {
+            if (state === 'deploying') {
+                badge.className = 'health-badge deploying';
+                badge.innerHTML = 'Deploying<span class="health-dots"></span>';
+                window.__deployLockedApps.add(appName);
+            } else if (state === 'deployed') {
+                badge.className = 'health-badge deployed';
+                badge.textContent = 'Deployed';
+                window.__deployLockedApps.add(appName);
+            } else {
+                badge.className = 'health-badge unknown';
+                badge.textContent = state || '…';
+            }
+            badge.title = title || '';
+        });
+    }
+
+    form.addEventListener('submit', function (e) {
+        const text = (messageInput.value || '').trim();
+        if (!text) {
+            e.preventDefault();
+            return;
+        }
+
+        // Rollback requests open in-chat confirm (params + Approve)
+        if (isRollbackIntent(text) && !rollbackApprovalGranted) {
+            e.preventDefault();
+            showRollbackConfirmCard(extractAppFromRollbackMessage(text));
+            return;
+        }
+
+        // Build (CI) requests require Approve first
+        if (isBuildIntent(text) && !buildApprovalGranted) {
+            e.preventDefault();
+            showBuildConfirmCard(extractAppFromBuildMessage(text));
+            return;
+        }
+
+        // Deploy/Jenkins requests require Approve first
+        if (isDeployIntent(text) && !approvalGranted) {
+            e.preventDefault();
+            showConfirmCard(null);
+            return;
+        }
+
+        if (emptyHint) {
+            emptyHint.style.display = 'none';
+        }
+
+        removeConfirmCard();
+
+        if (approvalGranted && isDeployIntent(text)) {
+            const appName = extractAppFromDeployMessage(text);
+            if (appName) {
+                try {
+                    sessionStorage.setItem(DEPLOY_STATE_KEY, JSON.stringify({
+                        app: appName,
+                        phase: 'deploying',
+                        startedAt: Date.now()
+                    }));
+                } catch (err) { /* ignore */ }
+                setBadgeState(appName, 'deploying', 'Deployment in progress');
+            }
+        }
+
+        // Keep value for POST via hidden field; clear visible composer immediately
+        if (messageHidden) messageHidden.value = text;
+        messageInput.value = '';
+        messageInput.readOnly = true;
+        messageInput.removeAttribute('required');
+
+        const pending = document.createElement('div');
+        pending.className = 'msg user';
+        pending.textContent = text;
+        chat.insertBefore(pending, loading);
+
+        loading.classList.add('visible');
+        form.classList.add('busy');
+        sendBtn.disabled = true;
+        sendBtn.classList.add('busy');
+        chat.scrollTop = chat.scrollHeight;
+
+        let seconds = 0;
+        secondsEl.textContent = '0';
+        window.setInterval(function () {
+            seconds += 1;
+            secondsEl.textContent = String(seconds);
+        }, 1000);
+    });
+
+    messageInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            form.requestSubmit();
+        }
+    });
+
+    document.querySelectorAll('.use-app').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const appName = btn.getAttribute('data-app');
+            if (!appName) return;
+            showConfirmCard(appName);
+        });
+    });
+
+    const chatDeployBtn = document.getElementById('chatDeployBtn');
+    const chatRollbackBtn = document.getElementById('chatRollbackBtn');
+    if (chatDeployBtn) {
+        chatDeployBtn.addEventListener('click', function () {
+            showConfirmCard(null);
+        });
+    }
+    if (chatRollbackBtn) {
+        chatRollbackBtn.addEventListener('click', function () {
+            showRollbackConfirmCard(null);
+        });
+    }
+
+    function setBackgroundInert(inert) {
+        const header = document.querySelector('header.topbar') || document.querySelector('header');
+        const workspace = document.getElementById('workspace');
+        [header, workspace].forEach(function (el) {
+            if (!el) return;
+            if (inert) {
+                el.setAttribute('inert', '');
+            } else {
+                el.removeAttribute('inert');
+            }
+        });
+        const chatInput = document.getElementById('messageInput');
+        if (inert && chatInput) {
+            chatInput.blur();
+        }
+    }
+
+    (function () {
+        const modal = document.getElementById('appModal');
+        const form = document.getElementById('appForm');
+        const titleEl = document.getElementById('appModalTitle');
+        const hintEl = document.getElementById('appModalHint');
+        const errorEl = document.getElementById('appFormError');
+        const saveBtn = document.getElementById('appFormSave');
+        const cancelBtn = document.getElementById('appFormCancel');
+        const originalNameEl = document.getElementById('appOriginalName');
+        const openButtons = [
+            document.getElementById('addAppBtn'),
+            document.getElementById('addAppBtnRail')
+        ].filter(Boolean);
+
+        const phaseSelect = document.getElementById('appPhase');
+        const phaseHint = document.getElementById('appPhaseHint');
+        const modalFields = document.getElementById('appModalFields');
+        const healthUrlInput = document.getElementById('appHealthUrl');
+        const jobTypeSelect = document.getElementById('appJobType');
+        const jobNameLabelText = document.getElementById('appJobNameLabelText');
+        const jobTypeHint = document.getElementById('appJobTypeHint');
+        const jobNameInput = document.getElementById('appJenkinsJob');
+        const jenkinsAppHint = document.getElementById('appJenkinsApplicationHint');
+        const exposureSelect = document.getElementById('appExposure');
+        const exposureHint = document.getElementById('appExposureHint');
+
+        const JOB_TYPE_UI = {
+            jenkins: {
+                deployLabel: 'Jenkins job',
+                deployPlaceholder: 'e.g. common-deploy-job',
+                deployHint: 'Deploy trigger: Jenkins common-deploy-job (implemented).',
+                buildLabel: 'Jenkins build job',
+                buildPlaceholder: 'e.g. common-build-job',
+                buildHint: 'Build trigger: Jenkins common-build-job (APPLICATION + IMAGE_VERSION).'
+            },
+            azure_cicd: {
+                deployLabel: 'Azure pipeline',
+                deployPlaceholder: 'e.g. inventory-api-pipeline',
+                deployHint: 'Azure CI/CD can be saved now; trigger will be implemented later.',
+                buildLabel: 'Azure build pipeline',
+                buildPlaceholder: 'e.g. inventory-api-ci',
+                buildHint: 'Azure build pipeline can be saved now; trigger later.'
+            },
+            other: {
+                deployLabel: 'Job / pipeline name',
+                deployPlaceholder: 'e.g. my-custom-job',
+                deployHint: 'Other job types can be saved now; trigger will be implemented later.',
+                buildLabel: 'Build job / pipeline name',
+                buildPlaceholder: 'e.g. my-custom-build',
+                buildHint: 'Build job can be saved now; trigger later.'
+            }
+        };
+        const APP_PARAM_HINT = {
+            build: 'common-build-job APPLICATION: payment-app, order-app, customer-portal-api.',
+            deploy: 'common-deploy-job APPLICATION: payment-app, order-app, customer-portal-api.'
+        };
+
+        const EXPOSURE_UI = {
+            external: 'External apps use a LoadBalancer job; internal apps use a private/internal job.',
+            internal: 'Internal apps stay private (ClusterIP / internal job). LoadBalancer is not used.'
+        };
+
+        function isBuildPhase() {
+            return (phaseSelect && phaseSelect.value) === 'build';
+        }
+
+        function syncJobTypeUi() {
+            const type = (jobTypeSelect && jobTypeSelect.value) || 'jenkins';
+            const cfg = JOB_TYPE_UI[type] || JOB_TYPE_UI.jenkins;
+            const build = isBuildPhase();
+            if (jobNameLabelText) jobNameLabelText.textContent = build ? cfg.buildLabel : cfg.deployLabel;
+            if (jobNameInput) jobNameInput.placeholder = build ? cfg.buildPlaceholder : cfg.deployPlaceholder;
+            if (jobTypeHint) jobTypeHint.textContent = build ? cfg.buildHint : cfg.deployHint;
+        }
+
+        function syncExposureUi() {
+            const exposure = (exposureSelect && exposureSelect.value) || 'external';
+            if (exposureHint) exposureHint.textContent = EXPOSURE_UI[exposure] || EXPOSURE_UI.external;
+        }
+
+        function syncPhaseUi() {
+            const build = isBuildPhase();
+            if (modalFields) {
+                modalFields.classList.toggle('phase-build', build);
+            }
+            if (phaseHint) phaseHint.style.display = build ? '' : 'none';
+            if (jenkinsAppHint) {
+                jenkinsAppHint.textContent = build ? APP_PARAM_HINT.build : APP_PARAM_HINT.deploy;
+            }
+            if (healthUrlInput) {
+                healthUrlInput.required = !build;
+            }
+            if (exposureSelect) {
+                exposureSelect.required = !build;
+            }
+            const imageVersionInput = document.getElementById('appImageVersion');
+            if (imageVersionInput) {
+                imageVersionInput.required = build;
+                if (build && !imageVersionInput.value.trim()) {
+                    imageVersionInput.value = '1.0.1';
+                }
+            }
+            if (jobNameInput && !jobNameInput.value.trim()) {
+                jobNameInput.placeholder = build ? 'e.g. common-build-job' : 'e.g. common-deploy-job';
+            }
+            syncJobTypeUi();
+        }
+
+        function setField(name, value) {
+            if (!form) return;
+            const el = form.querySelector('[name="' + name + '"]');
+            if (el) el.value = value == null ? '' : String(value);
+        }
+
+        function openAddModal() {
+            if (!modal || !form) return;
+            form.reset();
+            if (originalNameEl) originalNameEl.value = '';
+            setField('phase', 'build');
+            setField('jobType', 'jenkins');
+            setField('exposure', 'external');
+            setField('jenkinsJob', 'common-build-job');
+            setField('imageVersion', '1.0.1');
+            syncPhaseUi();
+            syncExposureUi();
+            if (titleEl) titleEl.textContent = 'Add application';
+            if (hintEl) hintEl.textContent = 'Saved into applications.json. Build (CI) uses common-build-job (APPLICATION + IMAGE_VERSION).';
+            if (saveBtn) saveBtn.textContent = 'Save';
+            if (errorEl) {
+                errorEl.textContent = '';
+                errorEl.classList.remove('visible');
+            }
+            setBackgroundInert(true);
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            const first = form.querySelector('input[name="name"]');
+            if (first) {
+                first.focus();
+                first.select();
+            }
+        }
+
+        function openEditModal(appName) {
+            if (!modal || !form || !appName) return;
+            const card = document.querySelector('[data-app-card="' + CSS.escape(appName) + '"]');
+            if (!card) return;
+            form.reset();
+            if (originalNameEl) originalNameEl.value = appName;
+            setField('name', card.getAttribute('data-name'));
+            setField('phase', card.getAttribute('data-phase') || 'deploy');
+            setField('jobType', card.getAttribute('data-job-type') || 'jenkins');
+            setField('exposure', card.getAttribute('data-exposure') || 'external');
+            setField('jenkinsJob', card.getAttribute('data-jenkins-job'));
+            setField('jenkinsApplication', card.getAttribute('data-jenkins-application'));
+            setField('imageVersion', card.getAttribute('data-image-version') || '1.0.1');
+            setField('containerPort', card.getAttribute('data-container-port'));
+            setField('servicePort', card.getAttribute('data-service-port'));
+            setField('description', card.getAttribute('data-description'));
+            setField('healthUrl', card.getAttribute('data-health-url'));
+            setField('cluster', card.getAttribute('data-cluster'));
+            setField('namespace', card.getAttribute('data-namespace'));
+            syncPhaseUi();
+            syncExposureUi();
+            if (titleEl) titleEl.textContent = 'Edit application';
+            if (hintEl) hintEl.textContent = 'Updates applications.json immediately.';
+            if (saveBtn) saveBtn.textContent = 'Update';
+            if (errorEl) {
+                errorEl.textContent = '';
+                errorEl.classList.remove('visible');
+            }
+            setBackgroundInert(true);
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            const first = form.querySelector('input[name="name"]');
+            if (first) {
+                first.focus();
+                first.select();
+            }
+        }
+
+        if (phaseSelect) {
+            phaseSelect.addEventListener('change', syncPhaseUi);
+        }
+        if (jobTypeSelect) {
+            jobTypeSelect.addEventListener('change', syncJobTypeUi);
+        }
+        if (exposureSelect) {
+            exposureSelect.addEventListener('change', syncExposureUi);
+        }
+
+        function closeModal() {
+            if (!modal) return;
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+            setBackgroundInert(false);
+        }
+
+        // Keep Ctrl/Cmd+C / V / X / A working inside modal fields
+        if (modal) {
+            modal.addEventListener('keydown', function (e) {
+                const key = (e.key || '').toLowerCase();
+                if ((e.ctrlKey || e.metaKey) && (key === 'c' || key === 'v' || key === 'x' || key === 'a')) {
+                    e.stopPropagation();
+                }
+            }, true);
+        }
+
+        openButtons.forEach(function (btn) {
+            btn.addEventListener('click', openAddModal);
+        });
+        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+        if (modal) {
+            modal.addEventListener('click', function (e) {
+                if (e.target === modal) closeModal();
+            });
+        }
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && modal && modal.classList.contains('open')) {
+                closeModal();
+            }
+        });
+
+        if (form) {
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                if (errorEl) {
+                    errorEl.textContent = '';
+                    errorEl.classList.remove('visible');
+                }
+                const data = Object.fromEntries(new FormData(form).entries());
+                const originalName = (data.originalName || '').trim();
+                const phase = (data.phase || 'deploy').trim();
+                const isBuild = phase === 'build';
+                function optionalPort(raw) {
+                    const s = (raw == null ? '' : String(raw)).trim();
+                    if (!s) return null;
+                    const n = Number(s);
+                    if (!Number.isInteger(n) || n < 1 || n > 65535) {
+                        throw new Error('Ports must be integers between 1 and 65535');
+                    }
+                    return n;
+                }
+                let containerPort = null;
+                let servicePort = null;
+                if (!isBuild) {
+                    try {
+                        containerPort = optionalPort(data.containerPort);
+                        servicePort = optionalPort(data.servicePort);
+                    } catch (portErr) {
+                        if (errorEl) {
+                            errorEl.textContent = portErr.message || String(portErr);
+                            errorEl.classList.add('visible');
+                        }
+                        return;
+                    }
+                    if (!(data.healthUrl || '').trim()) {
+                        if (errorEl) {
+                            errorEl.textContent = 'Health URL is required for Deploy (CD) entries.';
+                            errorEl.classList.add('visible');
+                        }
+                        return;
+                    }
+                }
+                if (!(data.jenkinsApplication || '').trim()) {
+                    if (errorEl) {
+                        errorEl.textContent = 'Jenkins APPLICATION is required (payment-app, order-app, or customer-portal-api).';
+                        errorEl.classList.add('visible');
+                    }
+                    return;
+                }
+                if (isBuild) {
+                    const imageVersion = (data.imageVersion || '').trim() || '1.0.1';
+                    if (!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(imageVersion)) {
+                        if (errorEl) {
+                            errorEl.textContent = 'IMAGE_VERSION must look like 1.0.1';
+                            errorEl.classList.add('visible');
+                        }
+                        return;
+                    }
+                }
+                const payload = isBuild
+                    ? {
+                        name: (data.name || '').trim(),
+                        phase: 'build',
+                        jobType: (data.jobType || 'jenkins').trim(),
+                        jenkinsJob: (data.jenkinsJob || 'common-build-job').trim(),
+                        jenkinsApplication: (data.jenkinsApplication || '').trim(),
+                        imageVersion: ((data.imageVersion || '').trim() || '1.0.1'),
+                        description: (data.description || '').trim()
+                    }
+                    : {
+                        name: (data.name || '').trim(),
+                        phase: 'deploy',
+                        jobType: (data.jobType || 'jenkins').trim(),
+                        exposure: (data.exposure || 'external').trim(),
+                        jenkinsJob: (data.jenkinsJob || '').trim(),
+                        jenkinsApplication: (data.jenkinsApplication || '').trim(),
+                        containerPort: containerPort,
+                        servicePort: servicePort,
+                        description: (data.description || '').trim(),
+                        healthUrl: (data.healthUrl || '').trim(),
+                        cluster: (data.cluster || '').trim(),
+                        namespace: (data.namespace || '').trim()
+                    };
+                if (saveBtn) saveBtn.disabled = true;
+                try {
+                    const url = originalName
+                        ? '/api/applications/' + encodeURIComponent(originalName)
+                        : '/api/applications';
+                    const res = await fetch(url, {
+                        method: originalName ? 'PUT' : 'POST',
+                        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+                        body: JSON.stringify(payload)
+                    });
+                    const body = await res.json().catch(function () { return {}; });
+                    if (!res.ok) {
+                        throw new Error(body.error || ('HTTP ' + res.status));
+                    }
+                    window.location.reload();
+                } catch (err) {
+                    if (errorEl) {
+                        errorEl.textContent = err.message || String(err);
+                        errorEl.classList.add('visible');
+                    }
+                } finally {
+                    if (saveBtn) saveBtn.disabled = false;
+                }
+            });
+        }
+
+        document.querySelectorAll('.edit-app').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                openEditModal(btn.getAttribute('data-app'));
+            });
+        });
+
+        (function () {
+            const buildModal = document.getElementById('buildModal');
+            const buildForm = document.getElementById('buildForm');
+            const buildError = document.getElementById('buildError');
+            const buildCancel = document.getElementById('buildCancel');
+            const buildSubmit = document.getElementById('buildSubmit');
+
+            function openBuildModal(appName) {
+                if (!buildModal || !buildForm || !appName) return;
+                const card = document.querySelector('[data-app-card="' + CSS.escape(appName) + '"]');
+                if (!card || card.getAttribute('data-phase') !== 'build') {
+                    window.alert('Select a Build (CI) catalog entry.');
+                    return;
+                }
+                buildForm.reset();
+                const catalogEl = document.getElementById('buildCatalogName');
+                const displayEl = document.getElementById('buildDisplayName');
+                const appEl = document.getElementById('buildJenkinsApplication');
+                const jobEl = document.getElementById('buildJenkinsJob');
+                const verEl = document.getElementById('buildImageVersion');
+                if (catalogEl) catalogEl.value = appName;
+                if (displayEl) displayEl.value = appName;
+                if (appEl) appEl.value = card.getAttribute('data-jenkins-application') || '';
+                if (jobEl) jobEl.value = card.getAttribute('data-jenkins-job') || 'common-build-job';
+                if (verEl) verEl.value = card.getAttribute('data-image-version') || '1.0.1';
+                if (buildError) {
+                    buildError.textContent = '';
+                    buildError.classList.remove('visible');
+                }
+                setBackgroundInert(true);
+                buildModal.classList.add('open');
+                buildModal.setAttribute('aria-hidden', 'false');
+                if (verEl) {
+                    verEl.focus();
+                    verEl.select();
+                }
+            }
+
+            function closeBuildModal() {
+                if (!buildModal) return;
+                buildModal.classList.remove('open');
+                buildModal.setAttribute('aria-hidden', 'true');
+                setBackgroundInert(false);
+            }
+
+            if (buildCancel) buildCancel.addEventListener('click', closeBuildModal);
+            if (buildModal) {
+                buildModal.addEventListener('click', function (e) {
+                    if (e.target === buildModal) closeBuildModal();
+                });
+            }
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && buildModal && buildModal.classList.contains('open')) {
+                    closeBuildModal();
+                }
+            });
+
+            document.querySelectorAll('.build-app').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    const appName = btn.getAttribute('data-app');
+                    if (!appName) return;
+                    // Same path as Deploy: AI chat + Approve, then Send
+                    if (typeof showBuildConfirmCard === 'function') {
+                        showBuildConfirmCard(appName);
+                    }
+                });
+            });
+
+            // Legacy modal kept in DOM but no longer used for direct /api/build
+            if (buildForm) {
+                buildForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    closeBuildModal();
+                    const data = Object.fromEntries(new FormData(buildForm).entries());
+                    const applicationName = (data.catalogName || '').trim();
+                    if (applicationName && typeof showBuildConfirmCard === 'function') {
+                        showBuildConfirmCard(applicationName);
+                    }
+                });
+            }
+        })();
+
+        (function () {
+            const rollbackModal = document.getElementById('rollbackModal');
+            const rollbackForm = document.getElementById('rollbackForm');
+            const rollbackError = document.getElementById('rollbackError');
+            const rollbackCancel = document.getElementById('rollbackCancel');
+            const rollbackSubmit = document.getElementById('rollbackSubmit');
+
+            function setRollbackField(name, value) {
+                const input = rollbackForm && rollbackForm.querySelector('input[name="' + name + '"]');
+                if (input) input.value = value == null ? '' : String(value);
+            }
+
+            function openRollbackModal(appName) {
+                if (!rollbackModal || !rollbackForm || !appName) return;
+                const card = document.querySelector('[data-app-card="' + CSS.escape(appName) + '"]');
+                rollbackForm.reset();
+                setRollbackField('appName', appName);
+                setRollbackField('cluster', card ? card.getAttribute('data-cluster') : '');
+                setRollbackField('namespace', card ? card.getAttribute('data-namespace') : '');
+                setRollbackField('imageVersion', '');
+                if (rollbackError) {
+                    rollbackError.textContent = '';
+                    rollbackError.classList.remove('visible');
+                }
+                setBackgroundInert(true);
+                rollbackModal.classList.add('open');
+                rollbackModal.setAttribute('aria-hidden', 'false');
+                const versionInput = rollbackForm.querySelector('input[name="imageVersion"]');
+                if (versionInput) versionInput.focus();
+            }
+
+            function closeRollbackModal() {
+                if (!rollbackModal) return;
+                rollbackModal.classList.remove('open');
+                rollbackModal.setAttribute('aria-hidden', 'true');
+                setBackgroundInert(false);
+            }
+
+            if (rollbackCancel) rollbackCancel.addEventListener('click', closeRollbackModal);
+            if (rollbackModal) {
+                rollbackModal.addEventListener('click', function (e) {
+                    if (e.target === rollbackModal) closeRollbackModal();
+                });
+            }
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && rollbackModal && rollbackModal.classList.contains('open')) {
+                    closeRollbackModal();
+                }
+            });
+
+            document.querySelectorAll('.rollback-app').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    // Prefer in-chat rollback confirm so it appears in AI Chat
+                    if (typeof showRollbackConfirmCard === 'function') {
+                        showRollbackConfirmCard(btn.getAttribute('data-app'));
+                        const chatPanelEl = document.getElementById('chatPanel');
+                        if (chatPanelEl) chatPanelEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    } else {
+                        openRollbackModal(btn.getAttribute('data-app'));
+                    }
+                });
+            });
+
+            if (rollbackForm) {
+                rollbackForm.addEventListener('submit', async function (e) {
+                    e.preventDefault();
+                    if (rollbackError) {
+                        rollbackError.textContent = '';
+                        rollbackError.classList.remove('visible');
+                    }
+                    const data = Object.fromEntries(new FormData(rollbackForm).entries());
+                    const payload = {
+                        cluster: (data.cluster || '').trim(),
+                        appName: (data.appName || '').trim(),
+                        imageVersion: (data.imageVersion || '').trim(),
+                        namespace: (data.namespace || '').trim()
+                    };
+                    if (rollbackSubmit) {
+                        rollbackSubmit.disabled = true;
+                        rollbackSubmit.textContent = 'Rolling back…';
+                    }
+                    try {
+                        const res = await fetch('/api/rollback', {
+                            method: 'POST',
+                            headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+                            body: JSON.stringify(payload)
+                        });
+                        const body = await res.json().catch(function () { return {}; });
+                        if (!res.ok) {
+                            throw new Error(body.error || body.result || ('HTTP ' + res.status));
+                        }
+                        closeRollbackModal();
+                        if (emptyHint) emptyHint.style.display = 'none';
+                        const block = body.deployResultBlock || body.result || '';
+                        const dataCard = parseDeployResult(block);
+                        if (dataCard && chat) {
+                            chat.insertBefore(buildDeployResultCard(dataCard), loading);
+                            chat.scrollTop = chat.scrollHeight;
+                        } else if (typeof appendAssistantNote === 'function') {
+                            appendAssistantNote(body.result || 'Rollback finished.');
+                        }
+                        const appName = payload.appName;
+                        if (appName) {
+                            setBadgeState(appName, 'deployed', 'Rollback finished — click Refresh health');
+                        }
+                    } catch (err) {
+                        if (rollbackError) {
+                            rollbackError.textContent = err.message || String(err);
+                            rollbackError.classList.add('visible');
+                        }
+                    } finally {
+                        if (rollbackSubmit) {
+                            rollbackSubmit.disabled = false;
+                            rollbackSubmit.textContent = 'Run rollback';
+                        }
+                    }
+                });
+            }
+        })();
+
+        const removeModal = document.getElementById('removeConfirmModal');
+        const removeNameEl = document.getElementById('removeConfirmName');
+        const removeJobEl = document.getElementById('removeConfirmJob');
+        const removeInput = document.getElementById('removeConfirmInput');
+        const removeErrorEl = document.getElementById('removeConfirmError');
+        const removeCancelBtn = document.getElementById('removeConfirmCancel');
+        const removeOkBtn = document.getElementById('removeConfirmOk');
+        let pendingRemoveName = null;
+        let pendingRemoveJob = null;
+
+        function jobMatches() {
+            if (!removeInput || pendingRemoveJob == null) return false;
+            return removeInput.value.trim() === pendingRemoveJob;
+        }
+
+        function syncRemoveButton() {
+            if (!removeOkBtn) return;
+            const matched = jobMatches();
+            removeOkBtn.disabled = !matched;
+            if (removeInput) {
+                if (removeInput.value.trim() && !matched) {
+                    removeInput.classList.add('mismatch');
+                } else {
+                    removeInput.classList.remove('mismatch');
+                }
+            }
+        }
+
+        function openRemoveModal(appName, jenkinsJob) {
+            if (!removeModal || !appName || !jenkinsJob) return;
+            pendingRemoveName = appName;
+            pendingRemoveJob = jenkinsJob;
+            if (removeNameEl) removeNameEl.textContent = appName;
+            if (removeJobEl) removeJobEl.textContent = jenkinsJob;
+            if (removeInput) {
+                removeInput.value = '';
+                removeInput.classList.remove('mismatch');
+                removeInput.placeholder = jenkinsJob;
+            }
+            if (removeErrorEl) {
+                removeErrorEl.textContent = '';
+                removeErrorEl.classList.remove('visible');
+            }
+            syncRemoveButton();
+            setBackgroundInert(true);
+            removeModal.classList.add('open');
+            removeModal.setAttribute('aria-hidden', 'false');
+            if (removeInput) removeInput.focus();
+        }
+
+        function closeRemoveModal() {
+            if (!removeModal) return;
+            removeModal.classList.remove('open');
+            removeModal.setAttribute('aria-hidden', 'true');
+            setBackgroundInert(false);
+            pendingRemoveName = null;
+            pendingRemoveJob = null;
+            if (removeInput) {
+                removeInput.value = '';
+                removeInput.classList.remove('mismatch');
+            }
+        }
+
+        if (removeInput) {
+            removeInput.addEventListener('input', syncRemoveButton);
+            removeInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (jobMatches() && removeOkBtn && !removeOkBtn.disabled) {
+                        removeOkBtn.click();
+                    } else {
+                        syncRemoveButton();
+                        if (removeErrorEl && removeInput.value.trim()) {
+                            removeErrorEl.textContent = 'Job name does not match. Type exactly: ' + pendingRemoveJob;
+                            removeErrorEl.classList.add('visible');
+                        }
+                    }
+                }
+            });
+        }
+
+        if (removeCancelBtn) removeCancelBtn.addEventListener('click', closeRemoveModal);
+        if (removeModal) {
+            removeModal.addEventListener('click', function (e) {
+                if (e.target === removeModal) closeRemoveModal();
+            });
+        }
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && removeModal && removeModal.classList.contains('open')) {
+                closeRemoveModal();
+            }
+        });
+
+        if (removeOkBtn) {
+            removeOkBtn.addEventListener('click', async function () {
+                const appName = pendingRemoveName;
+                if (!appName || !jobMatches()) {
+                    syncRemoveButton();
+                    if (removeErrorEl) {
+                        removeErrorEl.textContent = 'Job name does not match. Type exactly: ' + pendingRemoveJob;
+                        removeErrorEl.classList.add('visible');
+                    }
+                    return;
+                }
+                if (removeErrorEl) {
+                    removeErrorEl.textContent = '';
+                    removeErrorEl.classList.remove('visible');
+                }
+                removeOkBtn.disabled = true;
+                try {
+                    const res = await fetch('/api/applications/' + encodeURIComponent(appName), {
+                        method: 'DELETE',
+                        headers: csrfHeaders()
+                    });
+                    const body = await res.json().catch(function () { return {}; });
+                    if (!res.ok) {
+                        throw new Error(body.error || ('HTTP ' + res.status));
+                    }
+                    window.location.reload();
+                } catch (err) {
+                    if (removeErrorEl) {
+                        removeErrorEl.textContent = 'Failed to remove: ' + (err.message || err);
+                        removeErrorEl.classList.add('visible');
+                    }
+                    syncRemoveButton();
+                }
+            });
+        }
+
+        document.querySelectorAll('.remove-app').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const appName = btn.getAttribute('data-app');
+                if (!appName) return;
+                const card = document.querySelector('[data-app-card="' + CSS.escape(appName) + '"]');
+                const jenkinsJob = card && card.getAttribute('data-jenkins-job');
+                if (!jenkinsJob) {
+                    window.alert('Could not find Jenkins job name for ' + appName);
+                    return;
+                }
+                openRemoveModal(appName, jenkinsJob);
+            });
+        });
+    })();
+
+    (function () {
+        const checkedAtEl = document.getElementById('healthCheckedAt');
+        const refreshBtn = document.getElementById('healthRefreshBtn');
+        const lockedApps = window.__deployLockedApps;
+
+        function applyHealth(statuses) {
+            if (!Array.isArray(statuses)) return;
+            statuses.forEach(function (item) {
+                if (lockedApps.has(item.name)) return;
+                const status = (item.status || 'UNKNOWN').toUpperCase();
+                const cls = status === 'UP' ? 'up' : (status === 'DOWN' ? 'down' : 'unknown');
+                document.querySelectorAll('[data-health-for="' + item.name + '"]').forEach(function (badge) {
+                    badge.className = 'health-badge ' + cls;
+                    badge.textContent = status;
+                    badge.title = (item.detail || '') + (item.checkedAt ? ' @ ' + item.checkedAt : '');
+                });
+            });
+        }
+
+        async function refreshHealth(manual) {
+            if (refreshBtn) {
+                refreshBtn.disabled = true;
+                if (manual) refreshBtn.textContent = 'Checking…';
+            }
+            try {
+                const res = await fetch('/api/applications/health', { cache: 'no-store' });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                applyHealth(data.applications || []);
+                if (checkedAtEl) {
+                    checkedAtEl.textContent = 'Last check: ' + (data.checkedAt || new Date().toISOString());
+                }
+            } catch (err) {
+                if (checkedAtEl) {
+                    checkedAtEl.textContent = 'Last check failed: ' + err.message;
+                }
+                document.querySelectorAll('[data-health-for]').forEach(function (badge) {
+                    const app = badge.getAttribute('data-health-for');
+                    if (lockedApps.has(app)) return;
+                    badge.className = 'health-badge unknown';
+                    badge.textContent = 'ERR';
+                    badge.title = String(err);
+                });
+            } finally {
+                if (refreshBtn) {
+                    refreshBtn.disabled = false;
+                    refreshBtn.textContent = 'Refresh health';
+                }
+            }
+        }
+
+        function resumeDeployState() {
+            let raw = null;
+            try { raw = sessionStorage.getItem(DEPLOY_STATE_KEY); } catch (e) { return; }
+            if (!raw) return;
+            let state = null;
+            try { state = JSON.parse(raw); } catch (e) { return; }
+            if (!state || !state.app) return;
+
+            setBadgeState(state.app, 'deployed', 'Deployment finished — click Refresh health to check UP/DOWN');
+            // Unlock after a short moment so manual refresh can update the badge
+            window.setTimeout(function () {
+                lockedApps.delete(state.app);
+                try { sessionStorage.removeItem(DEPLOY_STATE_KEY); } catch (e) { /* ignore */ }
+            }, 1500);
+        }
+
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function () {
+                // Manual refresh only
+                lockedApps.clear();
+                try { sessionStorage.removeItem(DEPLOY_STATE_KEY); } catch (e) { /* ignore */ }
+                refreshHealth(true);
+            });
+        }
+
+        resumeDeployState();
+        // No automatic health checks — only Refresh health button
+        if (checkedAtEl) {
+            checkedAtEl.textContent = 'Last check: not run (click Refresh health)';
+        }
+    })();
+
+    (function jenkinsSettingsUi() {
+        const modal = document.getElementById('jenkinsSettingsModal');
+        const form = document.getElementById('jenkinsSettingsForm');
+        const openBtn = document.getElementById('jenkinsSettingsBtn');
+        const cancelBtn = document.getElementById('jenkinsSettingsCancel');
+        const testBtn = document.getElementById('jenkinsSettingsTest');
+        const applyBtn = document.getElementById('jenkinsSettingsApply');
+        const saveBtn = document.getElementById('jenkinsSettingsSave');
+        const errorEl = document.getElementById('jenkinsSettingsError');
+        const urlInput = document.getElementById('jenkinsUrlInput');
+        const userInput = document.getElementById('jenkinsUserInput');
+        const tokenInput = document.getElementById('jenkinsTokenInput');
+        const tokenHint = document.getElementById('jenkinsTokenHint');
+        const pill = document.getElementById('jenkinsStatusPill');
+        const actionButtons = [testBtn, applyBtn, saveBtn, cancelBtn].filter(Boolean);
+
+        function applyPill(data) {
+            if (!pill) return;
+            if (data && data.configured) {
+                pill.classList.remove('offline');
+                pill.textContent = 'Jenkins connected';
+                pill.title = (data.jenkinsUrl || '') + ' · ' + (data.jenkinsUser || '');
+            } else {
+                pill.classList.add('offline');
+                pill.textContent = 'Jenkins not configured';
+                pill.title = 'Open Settings to configure Jenkins URL / user / token';
+            }
+        }
+
+        function clearStatus() {
+            if (!errorEl) return;
+            errorEl.textContent = '';
+            errorEl.classList.remove('visible', 'success');
+        }
+
+        function showStatus(message, isSuccess) {
+            if (!errorEl) return;
+            errorEl.textContent = message || '';
+            errorEl.classList.toggle('success', !!isSuccess);
+            errorEl.classList.add('visible');
+        }
+
+        function setBusy(busy, busyLabel) {
+            actionButtons.forEach(function (btn) { btn.disabled = !!busy; });
+            if (testBtn && busy && busyLabel === 'test') testBtn.textContent = 'Testing…';
+            if (applyBtn && busy && busyLabel === 'apply') applyBtn.textContent = 'Applying…';
+            if (saveBtn && busy && busyLabel === 'save') saveBtn.textContent = 'Saving…';
+            if (!busy) {
+                if (testBtn) testBtn.textContent = 'Test connection';
+                if (applyBtn) applyBtn.textContent = 'Apply';
+                if (saveBtn) saveBtn.textContent = 'Save';
+            }
+        }
+
+        function payloadFromForm() {
+            return {
+                jenkinsUrl: (urlInput && urlInput.value || '').trim(),
+                jenkinsUser: (userInput && userInput.value || '').trim(),
+                jenkinsToken: (tokenInput && tokenInput.value || '').trim()
+            };
+        }
+
+        function requireCsrf() {
+            const csrfMeta = document.querySelector('meta[name="_csrf"]');
+            if (!csrfMeta || !csrfMeta.content) {
+                throw new Error('CSRF token missing — refresh the page and try again.');
+            }
+        }
+
+        async function loadSettings() {
+            const res = await fetch('/api/settings/jenkins', { cache: 'no-store' });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        }
+
+        async function persistSettings() {
+            requireCsrf();
+            const res = await fetch('/api/settings/jenkins', {
+                method: 'PUT',
+                headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify(payloadFromForm())
+            });
+            const body = await res.json().catch(function () { return {}; });
+            if (!res.ok) {
+                throw new Error(body.error || body.title || res.statusText || ('HTTP ' + res.status));
+            }
+            if (tokenHint && body.tokenSet) {
+                tokenHint.textContent = 'Token on file: ' + (body.jenkinsTokenMasked || '••••') + ' — leave blank to keep.';
+            }
+            if (tokenInput) tokenInput.value = '';
+            applyPill(body);
+            return body;
+        }
+
+        async function testConnection() {
+            requireCsrf();
+            const res = await fetch('/api/settings/jenkins/test', {
+                method: 'POST',
+                headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify(payloadFromForm())
+            });
+            const body = await res.json().catch(function () { return {}; });
+            if (body.ok) {
+                return body.message || 'Connected';
+            }
+            throw new Error(body.message || body.error || body.title || res.statusText || ('HTTP ' + res.status));
+        }
+
+        function openModal(data) {
+            if (!modal || !form) return;
+            form.reset();
+            if (urlInput) urlInput.value = (data && data.jenkinsUrl) || '';
+            if (userInput) userInput.value = (data && data.jenkinsUser) || '';
+            if (tokenInput) tokenInput.value = '';
+            if (tokenHint) {
+                tokenHint.textContent = (data && data.tokenSet)
+                    ? ('Token on file: ' + (data.jenkinsTokenMasked || '••••') + ' — leave blank to keep.')
+                    : 'Enter a Jenkins API token.';
+            }
+            clearStatus();
+            if (typeof setBackgroundInert === 'function') setBackgroundInert(true);
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            if (urlInput) urlInput.focus();
+        }
+
+        function closeModal() {
+            if (!modal) return;
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+            if (typeof setBackgroundInert === 'function') setBackgroundInert(false);
+        }
+
+        async function refreshStatus() {
+            try {
+                const data = await loadSettings();
+                applyPill(data);
+                return data;
+            } catch (e) {
+                applyPill(null);
+                return null;
+            }
+        }
+
+        if (openBtn) {
+            openBtn.addEventListener('click', async function () {
+                try {
+                    const data = await loadSettings();
+                    openModal(data || {});
+                } catch (err) {
+                    openModal({});
+                    showStatus('Could not load settings: ' + (err.message || err), false);
+                }
+            });
+        }
+        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+        // Stay open on backdrop click / text selection — only Cancel or Save closes.
+        if (modal) {
+            modal.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+            modal.addEventListener('click', function (e) { e.stopPropagation(); });
+        }
+
+        if (testBtn) {
+            testBtn.addEventListener('click', async function () {
+                clearStatus();
+                setBusy(true, 'test');
+                try {
+                    showStatus(await testConnection(), true);
+                } catch (err) {
+                    showStatus(err.message || String(err), false);
+                } finally {
+                    setBusy(false);
+                }
+            });
+        }
+
+        if (applyBtn) {
+            applyBtn.addEventListener('click', async function () {
+                clearStatus();
+                setBusy(true, 'apply');
+                try {
+                    await persistSettings();
+                    showStatus('Draft saved. Click Save to close.', true);
+                } catch (err) {
+                    showStatus(err.message || String(err), false);
+                } finally {
+                    setBusy(false);
+                }
+            });
+        }
+
+        if (form) {
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                clearStatus();
+                setBusy(true, 'save');
+                try {
+                    await persistSettings();
+                    closeModal();
+                } catch (err) {
+                    showStatus(err.message || String(err), false);
+                } finally {
+                    setBusy(false);
+                }
+            });
+        }
+
+        refreshStatus();
+    })();
+
+    (function formatJenkinsStyleTimes() {
+        function relativeTime(iso) {
+            if (!iso) return 'Never';
+            const t = Date.parse(iso);
+            if (Number.isNaN(t)) return iso;
+            const sec = Math.max(0, Math.floor((Date.now() - t) / 1000));
+            if (sec < 60) return sec + ' sec';
+            const min = Math.floor(sec / 60);
+            if (min < 60) return min + ' min';
+            const hr = Math.floor(min / 60);
+            const remMin = min % 60;
+            if (hr < 24) return remMin ? (hr + ' hr ' + remMin + ' min') : (hr + ' hr');
+            const days = Math.floor(hr / 24);
+            const remHr = hr % 24;
+            return remHr ? (days + ' day ' + remHr + ' hr') : (days + ' day');
+        }
+
+        function formatDuration(sec) {
+            const n = Number(sec);
+            if (!Number.isFinite(n) || n < 0) return '—';
+            if (n < 60) return n + ' sec';
+            const m = Math.floor(n / 60);
+            const s = n % 60;
+            if (m < 60) return s ? (m + ' min ' + s + ' sec') : (m + ' min');
+            const h = Math.floor(m / 60);
+            const rm = m % 60;
+            return rm ? (h + ' hr ' + rm + ' min') : (h + ' hr');
+        }
+
+        function absoluteTime(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            if (Number.isNaN(d.getTime())) return iso;
+            const pad = function (n) { return String(n).padStart(2, '0'); };
+            return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+                + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+        }
+
+        document.querySelectorAll('.last-run-cell[data-ts]').forEach(function (el) {
+            const ts = el.getAttribute('data-ts');
+            if (!ts) {
+                el.textContent = 'Never';
+                return;
+            }
+            el.textContent = relativeTime(ts);
+            el.title = absoluteTime(ts);
+        });
+        document.querySelectorAll('.exec-time-cell[data-ts]').forEach(function (el) {
+            const ts = el.getAttribute('data-ts');
+            if (!ts) {
+                el.textContent = '—';
+                return;
+            }
+            el.textContent = absoluteTime(ts);
+            el.title = ts;
+        });
+        document.querySelectorAll('.duration-cell[data-sec]').forEach(function (el) {
+            const sec = el.getAttribute('data-sec');
+            if (sec == null || sec === '') {
+                el.textContent = '—';
+                return;
+            }
+            el.textContent = formatDuration(sec);
+        });
+    })();
+</script>
+</body>
+</html>

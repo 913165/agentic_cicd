@@ -1,0 +1,298 @@
+package org.example.springai_agent_terraform_deploy_do.service;
+
+import org.example.springai_agent_terraform_deploy_do.settings.JenkinsSettings;
+import org.example.springai_agent_terraform_deploy_do.settings.JenkinsSettingsService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+/**
+ * Calls Jenkins Remote Access API with Basic auth (username + API token).
+ * No Terraform / curl / local-exec.
+ */
+@Service
+public class JenkinsClient {
+
+    private static final Logger log = LoggerFactory.getLogger(JenkinsClient.class);
+
+    private final JenkinsSettingsService jenkinsSettingsService;
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .build();
+
+    @Value("${app.jenkins.timeout-minutes:30}")
+    private long timeoutMinutes;
+
+    @Value("${app.jenkins.poll-seconds:5}")
+    private long pollSeconds;
+
+    public JenkinsClient(JenkinsSettingsService jenkinsSettingsService) {
+        this.jenkinsSettingsService = jenkinsSettingsService;
+    }
+
+    public Map<String, Object> testConnection() {
+        return testConnection(null, null, null);
+    }
+
+    /**
+     * Probe Jenkins. Blank override fields fall back to saved settings (token blank keeps stored token).
+     */
+    public Map<String, Object> testConnection(String urlOverride, String userOverride, String tokenOverride) {
+        JenkinsSettings saved = jenkinsSettingsService.getOrEmpty();
+        String url = firstNonBlank(urlOverride, saved.getJenkinsUrl());
+        String user = firstNonBlank(userOverride, saved.getJenkinsUser());
+        String token = (tokenOverride != null && !tokenOverride.isBlank())
+                ? tokenOverride.trim()
+                : (saved.getJenkinsToken() == null ? "" : saved.getJenkinsToken());
+
+        if (url.isBlank()) {
+            throw new IllegalArgumentException("Jenkins URL is required");
+        }
+        if (user.isBlank()) {
+            throw new IllegalArgumentException("Jenkins username is required");
+        }
+        if (token.isBlank()) {
+            throw new IllegalArgumentException("Jenkins API token is required");
+        }
+
+        JenkinsSettings probe = new JenkinsSettings();
+        probe.setJenkinsUrl(url.trim());
+        probe.setJenkinsUser(user.trim());
+        probe.setJenkinsToken(token);
+
+        String apiUrl = join(probe.getJenkinsUrl(), "/api/json");
+        try {
+            HttpResponse<String> response = send(probe, HttpRequest.newBuilder()
+                    .uri(URI.create(apiUrl))
+                    .timeout(Duration.ofSeconds(10))
+                    .GET()
+                    .header("Accept", "application/json"));
+            int code = response.statusCode();
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("url", apiUrl);
+            result.put("httpStatus", code);
+            if (code >= 200 && code < 300) {
+                result.put("ok", true);
+                result.put("message", "Connected to Jenkins (HTTP " + code + ")");
+            } else {
+                result.put("ok", false);
+                result.put("message", switch (code) {
+                    case 401 -> "Unauthorized — check username / API token";
+                    case 403 -> "Forbidden — token lacks permission";
+                    case 404 -> "Not found — check Jenkins URL";
+                    default -> "HTTP " + code;
+                });
+            }
+            return result;
+        } catch (Exception e) {
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("ok", false);
+            result.put("url", apiUrl);
+            result.put("message", "Could not reach Jenkins: " + e.getMessage());
+            return result;
+        }
+    }
+
+    private static String firstNonBlank(String preferred, String fallback) {
+        if (preferred != null && !preferred.isBlank()) {
+            return preferred.trim();
+        }
+        return fallback == null ? "" : fallback.trim();
+    }
+
+    /**
+     * Trigger {@code buildWithParameters} and wait until the new build finishes.
+     */
+    public JobRunResult triggerAndWait(String jobName, Map<String, String> parameters) {
+        JenkinsSettings s = requireConfigured();
+        String job = jobName == null ? "" : jobName.trim();
+        if (job.isEmpty()) {
+            throw new IllegalArgumentException("Jenkins job name is required");
+        }
+        Map<String, String> params = parameters == null ? Map.of() : parameters;
+
+        String jobUrl = join(s.getJenkinsUrl(), "/job/" + encodePath(job));
+        int before = readBuildNumber(s, jobUrl);
+        log.info("Jenkins trigger job={} beforeBuild=#{} params={}", job, before, params.keySet());
+
+        String form = params.entrySet().stream()
+                .map(e -> encode(e.getKey()) + "=" + encode(nullToEmpty(e.getValue())))
+                .collect(Collectors.joining("&"));
+
+        String triggerUrl = jobUrl + "/buildWithParameters";
+        try {
+            HttpResponse<String> trigger = send(s, HttpRequest.newBuilder()
+                    .uri(URI.create(triggerUrl))
+                    .timeout(Duration.ofSeconds(30))
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .POST(HttpRequest.BodyPublishers.ofString(form)));
+            int code = trigger.statusCode();
+            if (code != 201 && code != 200) {
+                String body = trigger.body() == null ? "" : trigger.body();
+                String hint = extractHtmlTitle(body);
+                String msg = "Failed to trigger Jenkins job '%s' (HTTP %d)%s"
+                        .formatted(job, code, hint.isEmpty() ? "" : ": " + hint);
+                if (code == 400 && body.toLowerCase().contains("not parameterized")) {
+                    msg += " — open the job in Jenkins and run Build once so Pipeline parameters register.";
+                }
+                return JobRunResult.failed(code, before, msg, body);
+            }
+
+            long deadline = System.currentTimeMillis() + timeoutMinutes * 60_000L;
+            StringBuilder logBuf = new StringBuilder();
+            logBuf.append("Triggered ").append(job).append(" HTTP ").append(code)
+                    .append(" (last build before=#").append(before).append(")\n");
+            logBuf.append("Params: ").append(params).append('\n');
+
+            while (System.currentTimeMillis() < deadline) {
+                Thread.sleep(Math.max(1, pollSeconds) * 1000L);
+                BuildInfo info = readBuild(s, jobUrl + "/lastBuild/api/json");
+                logBuf.append("poll number=").append(info.number())
+                        .append(" building=").append(info.building())
+                        .append(" result=").append(info.result()).append('\n');
+                log.debug("Jenkins poll job={} {}", job, info);
+
+                if (info.number() > before && !info.building()) {
+                    boolean ok = "SUCCESS".equalsIgnoreCase(info.result());
+                    String msg = ok
+                            ? "Jenkins job %s #%d completed successfully".formatted(job, info.number())
+                            : "Jenkins job %s #%d finished with result=%s".formatted(job, info.number(), info.result());
+                    return new JobRunResult(ok, code, info.number(), info.result(), msg, logBuf.toString().trim());
+                }
+            }
+            return JobRunResult.failed(code, before,
+                    "Timed out waiting for Jenkins job '%s' after %d minutes".formatted(job, timeoutMinutes),
+                    logBuf.toString().trim());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return JobRunResult.failed(0, before, "Interrupted waiting for Jenkins job '%s'".formatted(job), "");
+        } catch (Exception e) {
+            log.error("Jenkins trigger failed for job={}", job, e);
+            return JobRunResult.failed(0, before, "Jenkins API error: " + e.getMessage(), "");
+        }
+    }
+
+    private JenkinsSettings requireConfigured() {
+        JenkinsSettings s = jenkinsSettingsService.getOrEmpty();
+        if (!s.isConfigured()) {
+            throw new IllegalStateException(
+                    "Jenkins credentials are not configured. Open Settings and save URL / user / token.");
+        }
+        return s;
+    }
+
+    private int readBuildNumber(JenkinsSettings s, String jobUrl) {
+        try {
+            BuildInfo info = readBuild(s, jobUrl + "/lastBuild/api/json");
+            return Math.max(0, info.number());
+        } catch (Exception e) {
+            log.debug("No lastBuild yet for {}: {}", jobUrl, e.toString());
+            return 0;
+        }
+    }
+
+    private BuildInfo readBuild(JenkinsSettings s, String apiUrl) throws Exception {
+        HttpResponse<String> response = send(s, HttpRequest.newBuilder()
+                .uri(URI.create(apiUrl))
+                .timeout(Duration.ofSeconds(15))
+                .GET()
+                .header("Accept", "application/json"));
+        if (response.statusCode() == 404) {
+            return new BuildInfo(0, false, "");
+        }
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new IllegalStateException("HTTP " + response.statusCode() + " reading " + apiUrl);
+        }
+        String body = response.body() == null ? "" : response.body();
+        int number = parseIntField(body, "number");
+        boolean building = parseBooleanField(body, "building");
+        String result = parseStringField(body, "result");
+        return new BuildInfo(number, building, result);
+    }
+
+    private HttpResponse<String> send(JenkinsSettings s, HttpRequest.Builder builder) throws Exception {
+        String basic = Base64.getEncoder().encodeToString(
+                (s.getJenkinsUser() + ":" + s.getJenkinsToken()).getBytes(StandardCharsets.UTF_8));
+        HttpRequest request = builder.header("Authorization", "Basic " + basic).build();
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    }
+
+    private static String join(String base, String path) {
+        String b = base == null ? "" : base.trim().replaceAll("/+$", "");
+        if (!path.startsWith("/")) {
+            path = "/" + path;
+        }
+        return b + path;
+    }
+
+    private static String encode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
+    }
+
+    /** Encode a single path segment (job name). */
+    private static String encodePath(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
+    }
+
+    private static String nullToEmpty(String s) {
+        return s == null ? "" : s;
+    }
+
+    private static int parseIntField(String json, String name) {
+        Matcher m = Pattern.compile("\"" + name + "\"\\s*:\\s*(\\d+)").matcher(json);
+        return m.find() ? Integer.parseInt(m.group(1)) : 0;
+    }
+
+    private static boolean parseBooleanField(String json, String name) {
+        Matcher m = Pattern.compile("\"" + name + "\"\\s*:\\s*(true|false)", Pattern.CASE_INSENSITIVE).matcher(json);
+        return m.find() && Boolean.parseBoolean(m.group(1));
+    }
+
+    private static String parseStringField(String json, String name) {
+        Matcher m = Pattern.compile("\"" + name + "\"\\s*:\\s*(?:\"([^\"]*)\"|null)").matcher(json);
+        if (!m.find()) {
+            return "";
+        }
+        return m.group(1) == null ? "" : m.group(1);
+    }
+
+    private static String extractHtmlTitle(String html) {
+        if (html == null || html.isBlank()) {
+            return "";
+        }
+        Matcher m = Pattern.compile("<title>Error\\s+\\d+\\s+(.*?)</title>", Pattern.CASE_INSENSITIVE).matcher(html);
+        return m.find() ? m.group(1).trim() : "";
+    }
+
+    private record BuildInfo(int number, boolean building, String result) {
+    }
+
+    public record JobRunResult(
+            boolean ok,
+            int httpStatus,
+            int buildNumber,
+            String result,
+            String message,
+            String detail
+    ) {
+        static JobRunResult failed(int httpStatus, int buildNumber, String message, String detail) {
+            return new JobRunResult(false, httpStatus, buildNumber, "FAILED", message, detail);
+        }
+    }
+}
