@@ -18,13 +18,13 @@ pipeline {
         string(
                 name: 'CONTAINER_PORT',
                 defaultValue: '',
-                description: 'Container port; leave blank to use the application default'
+                description: 'Container port; blank uses the application default'
         )
 
         string(
                 name: 'SERVICE_PORT',
                 defaultValue: '',
-                description: 'Kubernetes Service port; leave blank to use the application default'
+                description: 'Service port; blank uses the application default'
         )
 
         string(
@@ -36,7 +36,7 @@ pipeline {
         choice(
                 name: 'EXPOSE_SERVICE',
                 choices: ['default', 'true', 'false'],
-                description: 'default uses the application default; true creates a LoadBalancer; false creates ClusterIP'
+                description: 'default uses application default; true creates LoadBalancer; false creates ClusterIP'
         )
     }
 
@@ -79,27 +79,40 @@ pipeline {
 
                     def cfg = appConfig[params.APPLICATION]
 
+                    if (cfg == null) {
+                        error("Unsupported application: ${params.APPLICATION}")
+                    }
+
                     env.APP_NAME = params.APPLICATION
                     env.NAMESPACE = cfg.namespace
                     env.SERVICE_NAME = cfg.serviceName
-                    env.DOCKER_IMG = "${env.REGISTRY}/${cfg.imageName}:${params.IMAGE_TAG}"
+                    env.DOCKER_IMG =
+                            "${env.REGISTRY}/${cfg.imageName}:${params.IMAGE_TAG}"
+
                     env.CONTAINER_PORT = params.CONTAINER_PORT?.trim()
-                            ? params.CONTAINER_PORT.trim() : cfg.containerPort
+                            ? params.CONTAINER_PORT.trim()
+                            : cfg.containerPort
+
                     env.SERVICE_PORT = params.SERVICE_PORT?.trim()
-                            ? params.SERVICE_PORT.trim() : cfg.servicePort
+                            ? params.SERVICE_PORT.trim()
+                            : cfg.servicePort
+
                     env.REPLICAS = params.REPLICAS.trim()
-                    env.EXPOSE_SERVICE = params.EXPOSE_SERVICE == 'default'
-                            ? cfg.expose : params.EXPOSE_SERVICE
+
+                    env.EXPOSE_SERVICE =
+                            params.EXPOSE_SERVICE == 'default'
+                                    ? cfg.expose
+                                    : params.EXPOSE_SERVICE
 
                     echo """
-                    Application: ${env.APP_NAME}
-                    Image: ${env.DOCKER_IMG}
-                    Namespace: ${env.NAMESPACE}
-                    Container port: ${env.CONTAINER_PORT}
-                    Service port: ${env.SERVICE_PORT}
-                    Replicas: ${env.REPLICAS}
-                    Public LoadBalancer: ${env.EXPOSE_SERVICE}
-                    """
+Application: ${env.APP_NAME}
+Image: ${env.DOCKER_IMG}
+Namespace: ${env.NAMESPACE}
+Container port: ${env.CONTAINER_PORT}
+Service port: ${env.SERVICE_PORT}
+Replicas: ${env.REPLICAS}
+Public LoadBalancer: ${env.EXPOSE_SERVICE}
+"""
                 }
             }
         }
@@ -109,18 +122,26 @@ pipeline {
                 sh '''
                     set -eu
 
+                    printf '%s' "$IMAGE_TAG" |
+                        grep -Eq '^[A-Za-z0-9_.-]+$'
+
                     printf '%s' "$NAMESPACE" |
-                      grep -Eq '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                        grep -Eq '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
 
                     printf '%s' "$APP_NAME" |
-                      grep -Eq '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                        grep -Eq '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
 
                     printf '%s' "$SERVICE_NAME" |
-                      grep -Eq '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                        grep -Eq '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
 
-                    printf '%s' "$CONTAINER_PORT" | grep -Eq '^[0-9]+$'
-                    printf '%s' "$SERVICE_PORT" | grep -Eq '^[0-9]+$'
-                    printf '%s' "$REPLICAS" | grep -Eq '^[1-9][0-9]*$'
+                    printf '%s' "$CONTAINER_PORT" |
+                        grep -Eq '^[0-9]+$'
+
+                    printf '%s' "$SERVICE_PORT" |
+                        grep -Eq '^[0-9]+$'
+
+                    printf '%s' "$REPLICAS" |
+                        grep -Eq '^[1-9][0-9]*$'
 
                     test "$CONTAINER_PORT" -ge 1
                     test "$CONTAINER_PORT" -le 65535
@@ -129,11 +150,61 @@ pipeline {
                     test -n "$DOCKER_IMG"
 
                     case "$EXPOSE_SERVICE" in
-                      true|false) ;;
-                      *) echo "Invalid EXPOSE_SERVICE value"; exit 1 ;;
+                        true|false) ;;
+                        *)
+                            echo "Invalid EXPOSE_SERVICE value"
+                            exit 1
+                            ;;
                     esac
 
                     echo "Configuration validated."
+                '''
+            }
+        }
+
+        stage('Prepare kubectl and doctl') {
+            steps {
+                sh '''
+                    set -eu
+
+                    mkdir -p "$WORKSPACE/bin" "$WORKSPACE/.kube"
+
+                    # Remove files left by an earlier build.
+                    rm -f "$WORKSPACE/bin/kubectl"
+                    rm -f "$WORKSPACE/bin/doctl"
+                    rm -f "$WORKSPACE/doctl.tar.gz"
+
+                    echo "===== Downloading kubectl ====="
+
+                    KUBECTL_VERSION=$(
+                        curl -fsSL https://dl.k8s.io/release/stable.txt
+                    )
+
+                    curl -fsSL \
+                        "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" \
+                        -o "$WORKSPACE/bin/kubectl"
+
+                    chmod 755 "$WORKSPACE/bin/kubectl"
+
+                    echo "===== Downloading doctl ====="
+
+                    curl -fsSL \
+                        "https://github.com/digitalocean/doctl/releases/download/v1.117.0/doctl-1.117.0-linux-amd64.tar.gz" \
+                        -o "$WORKSPACE/doctl.tar.gz"
+
+                    tar -xzf "$WORKSPACE/doctl.tar.gz" \
+                        -C "$WORKSPACE/bin"
+
+                    chmod 755 "$WORKSPACE/bin/doctl"
+
+                    export PATH="$WORKSPACE/bin:$PATH"
+
+                    echo "===== Verify tools ====="
+                    command -v kubectl
+                    kubectl version --client
+
+                    command -v doctl
+                    doctl version
                 '''
             }
         }
@@ -143,22 +214,15 @@ pipeline {
                 sh '''
                     set -eu
 
-                    mkdir -p "$WORKSPACE/bin" "$WORKSPACE/.kube"
-
-                    curl -fsSL \
-                      "https://github.com/digitalocean/doctl/releases/download/v1.117.0/doctl-1.117.0-linux-amd64.tar.gz" \
-                      -o "$WORKSPACE/doctl.tar.gz"
-
-                    tar -xzf "$WORKSPACE/doctl.tar.gz" \
-                      -C "$WORKSPACE/bin"
-
-                    chmod 700 "$WORKSPACE/bin/doctl"
-
                     export PATH="$WORKSPACE/bin:$PATH"
                     export KUBECONFIG="$WORKSPACE/.kube/config"
 
-                    doctl version
+                    echo "===== Authenticate with DigitalOcean ====="
+
                     doctl auth init --access-token "$DO_TOKEN"
+
+                    echo "===== Save Kubernetes credentials ====="
+
                     doctl kubernetes cluster kubeconfig save "$CLUSTER"
 
                     echo "===== Kubernetes context ====="
@@ -178,8 +242,10 @@ pipeline {
                     export PATH="$WORKSPACE/bin:$PATH"
                     export KUBECONFIG="$WORKSPACE/.kube/config"
 
+                    echo "===== Ensure namespace exists ====="
+
                     kubectl create namespace "$NAMESPACE" \
-                      --dry-run=client -o yaml | kubectl apply -f -
+                        --dry-run=client -o yaml | kubectl apply -f -
 
                     cat > "$WORKSPACE/deployment.yaml" <<EOF
 apiVersion: apps/v1
@@ -210,13 +276,20 @@ EOF
                     echo "===== Applying Deployment ====="
                     kubectl apply -f "$WORKSPACE/deployment.yaml"
 
+                    # Ensure latest is pulled again when redeploying
+                    # the same image tag.
                     echo "===== Restarting Deployment ====="
                     kubectl rollout restart "deployment/$APP_NAME" \
-                      -n "$NAMESPACE"
+                        -n "$NAMESPACE"
 
                     echo "===== Waiting for rollout ====="
                     kubectl rollout status "deployment/$APP_NAME" \
-                      -n "$NAMESPACE" --timeout=180s
+                        -n "$NAMESPACE" --timeout=180s
+
+                    SERVICE_TYPE=ClusterIP
+                    if [ "$EXPOSE_SERVICE" = "true" ]; then
+                        SERVICE_TYPE=LoadBalancer
+                    fi
 
                     cat > "$WORKSPACE/service.yaml" <<EOF
 apiVersion: v1
@@ -225,7 +298,7 @@ metadata:
   name: ${SERVICE_NAME}
   namespace: ${NAMESPACE}
 spec:
-  type: $(if [ "$EXPOSE_SERVICE" = "true" ]; then echo LoadBalancer; else echo ClusterIP; fi)
+  type: ${SERVICE_TYPE}
   selector:
     app: ${APP_NAME}
   ports:
@@ -246,8 +319,8 @@ EOF
 
                     echo "===== Deployed image ====="
                     kubectl get deployment "$APP_NAME" \
-                      -n "$NAMESPACE" \
-                      -o jsonpath='{.spec.template.spec.containers[0].image}{"\\n"}'
+                        -n "$NAMESPACE" \
+                        -o jsonpath='{.spec.template.spec.containers[0].image}{"\\n"}'
 
                     echo "===== Service ====="
                     kubectl get service "$SERVICE_NAME" -n "$NAMESPACE"
@@ -256,16 +329,33 @@ EOF
                     kubectl get endpoints "$SERVICE_NAME" -n "$NAMESPACE"
 
                     if [ "$EXPOSE_SERVICE" = "true" ]; then
-                      echo "===== LoadBalancer external IP ====="
-                      kubectl get service "$SERVICE_NAME" \
-                        -n "$NAMESPACE" \
-                        -o jsonpath='{.status.loadBalancer.ingress[0].ip}{"\\n"}'
+                        echo "===== LoadBalancer external IP ====="
+                        kubectl get service "$SERVICE_NAME" \
+                            -n "$NAMESPACE" \
+                            -o jsonpath='{.status.loadBalancer.ingress[0].ip}{"\\n"}'
                     else
-                      echo "===== Internal service URL ====="
-                      echo "http://${SERVICE_NAME}.${NAMESPACE}.svc.cluster.local:${SERVICE_PORT}"
+                        echo "===== Internal service URL ====="
+                        echo "http://${SERVICE_NAME}.${NAMESPACE}.svc.cluster.local:${SERVICE_PORT}"
                     fi
 
                     echo "Deployment completed successfully."
+                '''
+            }
+        }
+
+        stage('Cleanup temporary files') {
+            steps {
+                sh '''
+                    set -eu
+
+                    rm -rf "$WORKSPACE/.kube"
+                    rm -f "$WORKSPACE/deployment.yaml"
+                    rm -f "$WORKSPACE/service.yaml"
+                    rm -f "$WORKSPACE/doctl.tar.gz"
+                    rm -f "$WORKSPACE/bin/kubectl"
+                    rm -f "$WORKSPACE/bin/doctl"
+
+                    echo "Temporary deployment files removed."
                 '''
             }
         }
@@ -281,13 +371,6 @@ EOF
         }
 
         always {
-            sh '''
-                rm -rf "$WORKSPACE/.kube" "$WORKSPACE/bin" || true
-                rm -f "$WORKSPACE/deployment.yaml" \
-                      "$WORKSPACE/service.yaml" \
-                      "$WORKSPACE/doctl.tar.gz" || true
-            '''
-
             echo 'Common deployment pipeline finished.'
         }
     }
