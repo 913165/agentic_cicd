@@ -44,7 +44,6 @@ public class BuildController {
                             || result.contains("status=FAILED")
                             || result.startsWith("Jenkins build failed")
                             || result.startsWith("Jenkins build execution error")
-                            || result.startsWith("Jenkins build terraform")
                             || result.startsWith("Jenkins credentials")
             );
             Map<String, Object> body = new LinkedHashMap<>();

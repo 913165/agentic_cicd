@@ -118,6 +118,8 @@ public class JenkinsClient {
 
     /**
      * Trigger {@code buildWithParameters} and wait until the new build finishes.
+     * Pipeline jobs only expose parameters after Jenkins has parsed the Jenkinsfile once;
+     * if needed this seeds that with a plain {@code /build}, then retries with parameters.
      */
     public JobRunResult triggerAndWait(String jobName, Map<String, String> parameters) {
         JenkinsSettings s = requireConfigured();
@@ -126,40 +128,52 @@ public class JenkinsClient {
             throw new IllegalArgumentException("Jenkins job name is required");
         }
         Map<String, String> params = parameters == null ? Map.of() : parameters;
-
         String jobUrl = join(s.getJenkinsUrl(), "/job/" + encodePath(job));
-        int before = readBuildNumber(s, jobUrl);
-        log.info("Jenkins trigger job={} beforeBuild=#{} params={}", job, before, params.keySet());
+        StringBuilder logBuf = new StringBuilder();
 
-        String form = params.entrySet().stream()
-                .map(e -> encode(e.getKey()) + "=" + encode(nullToEmpty(e.getValue())))
-                .collect(Collectors.joining("&"));
-
-        String triggerUrl = jobUrl + "/buildWithParameters";
         try {
-            HttpResponse<String> trigger = send(s, HttpRequest.newBuilder()
-                    .uri(URI.create(triggerUrl))
-                    .timeout(Duration.ofSeconds(30))
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .POST(HttpRequest.BodyPublishers.ofString(form)));
+            if (!isParameterized(s, jobUrl)) {
+                log.info("Jenkins job {} not parameterized yet — seeding via plain /build", job);
+                logBuf.append("Job not parameterized yet; seeding Pipeline parameters via /build\n");
+                String seedError = seedPipelineParameters(s, jobUrl, job, logBuf);
+                if (seedError != null) {
+                    return JobRunResult.failed(400, readBuildNumber(s, jobUrl), seedError, logBuf.toString().trim());
+                }
+            }
+
+            int before = readBuildNumber(s, jobUrl);
+            log.info("Jenkins trigger job={} beforeBuild=#{} params={}", job, before, params.keySet());
+            logBuf.append("Trigger beforeBuild=#").append(before)
+                    .append(" params=").append(params).append('\n');
+
+            HttpResponse<String> trigger = postBuildWithParameters(s, jobUrl, params);
             int code = trigger.statusCode();
+            String body = trigger.body() == null ? "" : trigger.body();
+
+            // Fresh Pipeline job: parameters may still be missing; seed once and retry.
+            if (code == 400 && body.toLowerCase().contains("not parameterized")) {
+                log.info("Jenkins job {} returned not parameterized — seeding and retrying", job);
+                logBuf.append("buildWithParameters HTTP 400 not parameterized; seeding and retrying\n");
+                String seedError = seedPipelineParameters(s, jobUrl, job, logBuf);
+                if (seedError != null) {
+                    return JobRunResult.failed(400, before, seedError, logBuf.toString().trim());
+                }
+                before = readBuildNumber(s, jobUrl);
+                trigger = postBuildWithParameters(s, jobUrl, params);
+                code = trigger.statusCode();
+                body = trigger.body() == null ? "" : trigger.body();
+            }
+
             if (code != 201 && code != 200) {
-                String body = trigger.body() == null ? "" : trigger.body();
                 String hint = extractHtmlTitle(body);
                 String msg = "Failed to trigger Jenkins job '%s' (HTTP %d)%s"
                         .formatted(job, code, hint.isEmpty() ? "" : ": " + hint);
-                if (code == 400 && body.toLowerCase().contains("not parameterized")) {
-                    msg += " — open the job in Jenkins and run Build once so Pipeline parameters register.";
-                }
-                return JobRunResult.failed(code, before, msg, body);
+                logBuf.append(msg).append('\n');
+                return JobRunResult.failed(code, before, msg, logBuf.toString().trim());
             }
 
+            logBuf.append("Triggered ").append(job).append(" HTTP ").append(code).append('\n');
             long deadline = System.currentTimeMillis() + timeoutMinutes * 60_000L;
-            StringBuilder logBuf = new StringBuilder();
-            logBuf.append("Triggered ").append(job).append(" HTTP ").append(code)
-                    .append(" (last build before=#").append(before).append(")\n");
-            logBuf.append("Params: ").append(params).append('\n');
-
             while (System.currentTimeMillis() < deadline) {
                 Thread.sleep(Math.max(1, pollSeconds) * 1000L);
                 BuildInfo info = readBuild(s, jobUrl + "/lastBuild/api/json");
@@ -181,11 +195,86 @@ public class JenkinsClient {
                     logBuf.toString().trim());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return JobRunResult.failed(0, before, "Interrupted waiting for Jenkins job '%s'".formatted(job), "");
+            return JobRunResult.failed(0, 0, "Interrupted waiting for Jenkins job '%s'".formatted(job), logBuf.toString().trim());
         } catch (Exception e) {
             log.error("Jenkins trigger failed for job={}", job, e);
-            return JobRunResult.failed(0, before, "Jenkins API error: " + e.getMessage(), "");
+            return JobRunResult.failed(0, 0, "Jenkins API error: " + e.getMessage(), logBuf.toString().trim());
         }
+    }
+
+    private HttpResponse<String> postBuildWithParameters(JenkinsSettings s, String jobUrl, Map<String, String> params)
+            throws Exception {
+        String form = params.entrySet().stream()
+                .map(e -> encode(e.getKey()) + "=" + encode(nullToEmpty(e.getValue())))
+                .collect(Collectors.joining("&"));
+        return send(s, HttpRequest.newBuilder()
+                .uri(URI.create(jobUrl + "/buildWithParameters"))
+                .timeout(Duration.ofSeconds(30))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(form)));
+    }
+
+    private boolean isParameterized(JenkinsSettings s, String jobUrl) {
+        try {
+            String tree = encode("property[parameterDefinitions[name]]");
+            HttpResponse<String> response = send(s, HttpRequest.newBuilder()
+                    .uri(URI.create(jobUrl + "/api/json?tree=" + tree))
+                    .timeout(Duration.ofSeconds(15))
+                    .GET()
+                    .header("Accept", "application/json"));
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                return false;
+            }
+            String body = response.body() == null ? "" : response.body();
+            return body.contains("parameterDefinitions");
+        } catch (Exception e) {
+            log.debug("Could not check parameterized status for {}: {}", jobUrl, e.toString());
+            return false;
+        }
+    }
+
+    /**
+     * @return null on success, or an error message
+     */
+    private String seedPipelineParameters(JenkinsSettings s, String jobUrl, String job, StringBuilder logBuf)
+            throws Exception {
+        HttpResponse<String> seed = send(s, HttpRequest.newBuilder()
+                .uri(URI.create(jobUrl + "/build"))
+                .timeout(Duration.ofSeconds(30))
+                .POST(HttpRequest.BodyPublishers.noBody()));
+        int seedCode = seed.statusCode();
+        String seedBody = seed.body() == null ? "" : seed.body();
+        logBuf.append("Seed /build HTTP ").append(seedCode).append('\n');
+
+        // Already parameterized jobs reject plain /build with 400 — treat as ready.
+        if (seedCode == 400) {
+            logBuf.append("Seed /build HTTP 400 (job likely already requires parameters) — continuing\n");
+            return null;
+        }
+        if (seedCode != 201 && seedCode != 200) {
+            String hint = extractHtmlTitle(seedBody);
+            return "Failed to seed Jenkins parameters for '%s' (HTTP %d)%s"
+                    .formatted(job, seedCode, hint.isEmpty() ? "" : ": " + hint);
+        }
+
+        long deadline = System.currentTimeMillis() + Math.min(timeoutMinutes, 10) * 60_000L;
+        while (System.currentTimeMillis() < deadline) {
+            Thread.sleep(2000L);
+            if (isParameterized(s, jobUrl)) {
+                logBuf.append("Pipeline parameters registered\n");
+                // Let the seed build finish so lastBuild number is stable.
+                for (int i = 0; i < 90; i++) {
+                    BuildInfo info = readBuild(s, jobUrl + "/lastBuild/api/json");
+                    if (!info.building() || info.number() == 0) {
+                        break;
+                    }
+                    Thread.sleep(2000L);
+                }
+                return null;
+            }
+            logBuf.append("Waiting for parameter registration...\n");
+        }
+        return "Timed out waiting for Jenkins job '%s' to register Pipeline parameters. Open the job in Jenkins and click Build once, then retry.".formatted(job);
     }
 
     private JenkinsSettings requireConfigured() {

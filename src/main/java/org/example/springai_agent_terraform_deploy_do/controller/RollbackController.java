@@ -49,7 +49,6 @@ public class RollbackController {
                             || result.contains("status=FAILED")
                             || result.startsWith("Jenkins rollback failed")
                             || result.startsWith("Jenkins rollback execution error")
-                            || result.startsWith("Rollback terraform")
                             || result.startsWith("Jenkins credentials")
             );
             Map<String, Object> body = new LinkedHashMap<>();

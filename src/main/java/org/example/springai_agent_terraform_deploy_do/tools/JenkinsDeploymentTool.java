@@ -141,7 +141,7 @@ public class JenkinsDeploymentTool {
                 ? "Deployed " + application + " successfully"
                 : "Deployment of " + application + " failed";
         String json = """
-                {"ok":%s,"title":"%s","application":"%s","job":"%s","status":"%s","exitCode":%d,"buildNumber":%d,"added":0,"changed":0,"destroyed":0}
+                {"ok":%s,"title":"%s","application":"%s","job":"%s","status":"%s","exitCode":%d,"buildNumber":%d,"message":"%s","added":0,"changed":0,"destroyed":0}
                 """.formatted(
                 ok,
                 escapeJson(title),
@@ -149,7 +149,8 @@ public class JenkinsDeploymentTool {
                 escapeJson(job),
                 escapeJson(status),
                 ok ? 0 : 1,
-                result.buildNumber()
+                result.buildNumber(),
+                escapeJson(result.message())
         ).trim();
 
         String markerBlock = """

@@ -3,7 +3,6 @@ package org.example.springai_agent_terraform_deploy_do.controller;
 import org.example.springai_agent_terraform_deploy_do.config.ApplicationCatalog;
 import org.example.springai_agent_terraform_deploy_do.tools.ApplicationCatalogTool;
 import org.example.springai_agent_terraform_deploy_do.tools.DeployResultHolder;
-import org.example.springai_agent_terraform_deploy_do.tools.DeploymentSimulationTool;
 import org.example.springai_agent_terraform_deploy_do.tools.JenkinsBuildTool;
 import org.example.springai_agent_terraform_deploy_do.tools.JenkinsDeploymentTool;
 import org.example.springai_agent_terraform_deploy_do.tools.JenkinsRollbackTool;
@@ -31,7 +30,6 @@ public class DeployChatController {
     private final ApplicationCatalog applicationCatalog;
 
     public DeployChatController(ChatClient.Builder chatClientBuilder,
-                                DeploymentSimulationTool deploymentSimulationTool,
                                 JenkinsDeploymentTool jenkinsDeploymentTool,
                                 JenkinsBuildTool jenkinsBuildTool,
                                 JenkinsRollbackTool jenkinsRollbackTool,
@@ -55,7 +53,6 @@ public class DeployChatController {
                         - Never build, deploy, or roll back without explicit user approval.
                         - Never invent an automatic rollback after a failed deploy.
                         - Use listApplications when the user asks which apps exist or which jobs are available.
-                        - Use simulateDeployment for direct Kubernetes/Terraform deploys (terraform/ directory) only if approved.
                         - Use buildViaJenkins for phase=build apps when the user message contains "(approved)" /
                           explicit build approval. Pass approved=true, catalog name exactly, and IMAGE_VERSION
                           (semver e.g. 1.0.1; default 1.0.1 if omitted). Job + APPLICATION come from the catalog.
@@ -85,7 +82,7 @@ public class DeployChatController {
                         exactly as returned (do not rewrite the JSON). You may add at most one short
                         sentence before that block. Do not paste the full Jenkins log in the reply.
                         """)
-                .defaultTools(deploymentSimulationTool, jenkinsDeploymentTool, jenkinsBuildTool,
+                .defaultTools(jenkinsDeploymentTool, jenkinsBuildTool,
                         jenkinsRollbackTool, applicationCatalogTool)
                 .build();
     }
