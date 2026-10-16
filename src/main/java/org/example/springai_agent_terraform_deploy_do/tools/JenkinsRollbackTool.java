@@ -59,14 +59,18 @@ public class JenkinsRollbackTool {
                     """.trim();
         }
 
-        String resolvedApp = blankToNull(appName);
+        String catalogName = blankToNull(appName);
         String resolvedCluster = blankToNull(cluster);
         String resolvedVersion = blankToNull(imageVersion);
         String resolvedNamespace = blankToNull(namespace);
+        // Jenkins common-rollback-job APP_NAME is a Choice (payment-app | order-app).
+        // Catalog UI names (e.g. paynent-job-v2) must map to jenkinsApplication.
+        String jenkinsAppName = catalogName;
 
-        if (resolvedApp != null) {
-            ApplicationConfig app = applicationCatalog.findByName(resolvedApp).orElse(null);
+        if (catalogName != null) {
+            ApplicationConfig app = applicationCatalog.findByName(catalogName).orElse(null);
             if (app != null) {
+                jenkinsAppName = app.resolvedJenkinsApplication();
                 if (resolvedCluster == null && app.cluster() != null && !app.cluster().isBlank()) {
                     resolvedCluster = app.cluster().trim();
                 }
@@ -77,7 +81,7 @@ public class JenkinsRollbackTool {
         }
 
         try {
-            resolvedApp = trimRequired(resolvedApp, "APP_NAME");
+            jenkinsAppName = trimRequired(jenkinsAppName, "APP_NAME");
             resolvedCluster = trimRequired(resolvedCluster, "CLUSTER");
             resolvedVersion = trimRequired(resolvedVersion, "IMAGE_VERSION");
             resolvedNamespace = trimRequired(resolvedNamespace, "NAMESPACE");
@@ -89,16 +93,17 @@ public class JenkinsRollbackTool {
             return "Jenkins credentials are not configured. Open Settings and save URL / user / token.";
         }
 
+        String displayApp = catalogName != null ? catalogName : jenkinsAppName;
         String job = rollbackJobName == null || rollbackJobName.isBlank() ? DEFAULT_JOB : rollbackJobName.trim();
         Map<String, String> params = new LinkedHashMap<>();
         params.put("CLUSTER", resolvedCluster);
-        params.put("APP_NAME", resolvedApp);
+        params.put("APP_NAME", jenkinsAppName);
         params.put("IMAGE_VERSION", resolvedVersion);
         params.put("NAMESPACE", resolvedNamespace);
 
         try {
             JenkinsClient.JobRunResult result = jenkinsClient.triggerAndWait(job, params);
-            return buildToolResult(result, resolvedApp, job, resolvedCluster, resolvedVersion, resolvedNamespace);
+            return buildToolResult(result, displayApp, job, resolvedCluster, resolvedVersion, resolvedNamespace);
         } catch (IllegalStateException e) {
             return e.getMessage();
         } catch (Exception e) {

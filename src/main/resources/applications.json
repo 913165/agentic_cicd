@@ -7,7 +7,10 @@
   "namespace" : "payment-app",
   "jobType" : "jenkins",
   "exposure" : "external",
-  "phase" : "deploy"
+  "phase" : "deploy",
+  "lastExecutedAt" : "2026-10-15T11:07:39.584769900Z",
+  "lastStatus" : "FAILED",
+  "lastDurationSec" : 0
 }, {
   "name" : "order-app",
   "jenkinsJob" : "order-api-deployment",
@@ -28,7 +31,7 @@
   "servicePort" : 80,
   "jenkinsApplication" : "payment-app",
   "phase" : "deploy",
-  "lastExecutedAt" : "2026-10-14T22:40:48.293039500Z",
+  "lastExecutedAt" : "2026-10-15T12:17:38.180642600Z",
   "lastStatus" : "SUCCESS",
   "lastDurationSec" : 50
 }, {
@@ -39,7 +42,7 @@
   "jenkinsApplication" : "payment-app",
   "phase" : "build",
   "imageVersion" : "1.0.11",
-  "lastExecutedAt" : "2026-10-15T00:07:34.381616800Z",
+  "lastExecutedAt" : "2026-10-15T22:46:00.173528800Z",
   "lastStatus" : "SUCCESS",
-  "lastDurationSec" : 15
+  "lastDurationSec" : 20
 } ]

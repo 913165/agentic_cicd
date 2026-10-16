@@ -168,6 +168,9 @@ public class JenkinsClient {
                 String hint = extractHtmlTitle(body);
                 String msg = "Failed to trigger Jenkins job '%s' (HTTP %d)%s"
                         .formatted(job, code, hint.isEmpty() ? "" : ": " + hint);
+                if (code == 500) {
+                    msg += " — often an invalid Choice parameter (value not in Jenkins job choices)";
+                }
                 logBuf.append(msg).append('\n');
                 return JobRunResult.failed(code, before, msg, logBuf.toString().trim());
             }
