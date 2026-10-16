@@ -1,5 +1,6 @@
 package org.example.springai_agent_terraform_deploy_do.controller;
 
+import org.example.springai_agent_terraform_deploy_do.service.AiConfigurationGuard;
 import org.example.springai_agent_terraform_deploy_do.tools.DeployResultHolder;
 import org.example.springai_agent_terraform_deploy_do.tools.JenkinsRollbackTool;
 import org.springframework.http.HttpStatus;
@@ -17,9 +18,12 @@ import java.util.Map;
 public class RollbackController {
 
     private final JenkinsRollbackTool jenkinsRollbackTool;
+    private final AiConfigurationGuard aiConfigurationGuard;
 
-    public RollbackController(JenkinsRollbackTool jenkinsRollbackTool) {
+    public RollbackController(JenkinsRollbackTool jenkinsRollbackTool,
+                              AiConfigurationGuard aiConfigurationGuard) {
         this.jenkinsRollbackTool = jenkinsRollbackTool;
+        this.aiConfigurationGuard = aiConfigurationGuard;
     }
 
     public record RollbackRequest(
@@ -32,6 +36,10 @@ public class RollbackController {
 
     @PostMapping
     public ResponseEntity<?> rollback(@RequestBody RollbackRequest request) {
+        var blocked = aiConfigurationGuard.rejectIfNotReady();
+        if (blocked.isPresent()) {
+            return blocked.get();
+        }
         try {
             if (request == null) {
                 return ResponseEntity.badRequest().body(error("Request body is required"));

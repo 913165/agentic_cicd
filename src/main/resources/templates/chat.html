@@ -346,69 +346,39 @@
             text-transform: uppercase;
             color: var(--muted);
         }
-        .app-list {
+        .config-list {
             display: flex;
             flex-direction: column;
-            gap: .3rem;
+            gap: .65rem;
             padding: 0 .15rem;
         }
-        .app-item {
+        .config-card {
             display: flex;
-            align-items: center;
-            gap: .7rem;
-            width: 100%;
-            text-align: left;
-            border: 1px solid transparent;
+            flex-direction: column;
+            gap: .55rem;
+            padding: .75rem .7rem;
+            border: 1px solid var(--border);
             border-radius: var(--radius-sm);
-            background: transparent;
-            color: var(--text);
-            padding: .6rem .65rem;
-            cursor: pointer;
-            font: inherit;
-            transition: background .15s, border-color .15s, box-shadow .15s;
+            background: var(--surface-2);
         }
-        .app-item:hover {
-            background: var(--rail-hover);
-            border-color: var(--border);
-        }
-        .app-item:active {
-            background: var(--rail-active);
-        }
-        .app-avatar {
-            width: 2.25rem;
-            height: 2.25rem;
-            border-radius: 50%;
-            flex-shrink: 0;
-            display: grid;
-            place-items: center;
-            font-size: .82rem;
-            font-weight: 700;
-            color: var(--accent);
-            background: var(--accent-soft);
-            border: 1px solid rgba(124, 92, 255, 0.2);
-        }
-        .app-item-body {
-            min-width: 0;
-            flex: 1;
-        }
-        .app-item .app-name {
-            display: block;
-            font-size: .84rem;
-            font-weight: 600;
-            color: var(--text-strong);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .app-item .app-job {
-            display: block;
-            margin-top: .1rem;
-            font-family: var(--font-mono);
+        .config-card-label {
             font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: .06em;
+            text-transform: uppercase;
             color: var(--muted);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        }
+        .config-card .jenkins-pill {
+            width: 100%;
+            justify-content: flex-start;
+            border-radius: 10px;
+            white-space: normal;
+        }
+        .config-card .settings-btn {
+            width: 100%;
+            justify-content: center;
+            height: 2.1rem;
+            border-radius: 10px;
         }
         .app-empty {
             padding: .75rem .65rem;
@@ -1523,7 +1493,7 @@
             .menu-rail {
                 width: 100% !important;
                 max-width: none;
-                max-height: 180px;
+                max-height: none;
             }
             .splitter { display: none; }
             .editor-panel {
@@ -1537,7 +1507,6 @@
                 flex: 1 1 45%;
                 min-height: 260px;
             }
-            .jenkins-pill { display: none; }
             .header-text p { display: none; }
         }
     </style>
@@ -1566,8 +1535,6 @@
         </div>
     </div>
     <div class="header-actions">
-        <span class="jenkins-pill offline" id="jenkinsStatusPill" title="Jenkins credentials">Jenkins not configured</span>
-        <button type="button" class="settings-btn" id="jenkinsSettingsBtn" title="Jenkins connection settings">Settings</button>
         <span class="user-pill" th:if="${currentUsername != null}"
               th:text="${currentUsername}">admin</span>
         <form th:action="@{/logout}" method="post" style="margin:0;display:inline;">
@@ -1590,29 +1557,23 @@
 </header>
 
 <div class="workspace" id="workspace">
-    <!-- Left applications list -->
-    <aside class="menu-rail" id="menuPanel" aria-label="Applications">
-        <div class="menu-title">Applications</div>
-        <div class="app-list" th:if="${applications != null and !#lists.isEmpty(applications)}">
-            <button type="button" class="app-item use-app"
-                    th:each="app : ${applications}"
-                    th:attr="data-app=${app.name}, title=${app.description}">
-                <span class="app-avatar" th:text="${#strings.toUpperCase(#strings.substring(app.name, 0, 1))}">P</span>
-                <span class="app-item-body">
-                    <span class="app-name" th:text="${app.name}">payment-app</span>
-                    <span class="app-job"
-                          th:text="|${app.phase.label} · ${app.jenkinsJob}|">Deploy (CD) · payment-app</span>
-                </span>
-            </button>
-        </div>
-        <button type="button" id="addAppBtnRail" class="app-item" style="margin-top:.35rem;justify-content:center;color:var(--accent);font-weight:600;">
-            + Add application
-        </button>
-        <div class="app-empty" th:if="${applications == null or #lists.isEmpty(applications)}">
-            No applications registered.
+    <!-- Left configuration panel -->
+    <aside class="menu-rail" id="menuPanel" aria-label="Configuration">
+        <div class="menu-title">Configuration</div>
+        <div class="config-list">
+            <div class="config-card">
+                <div class="config-card-label">OpenAI</div>
+                <span class="jenkins-pill offline" id="openaiStatusPill" title="OpenAI key and model are not set up properly">Key / model not set up</span>
+                <button type="button" class="settings-btn" id="openaiSettingsBtn" title="OpenAI API key settings">Configure AI key</button>
+            </div>
+            <div class="config-card">
+                <div class="config-card-label">Jenkins</div>
+                <span class="jenkins-pill offline" id="jenkinsStatusPill" title="Jenkins credentials">Jenkins not configured</span>
+                <button type="button" class="settings-btn" id="jenkinsSettingsBtn" title="Jenkins connection settings">Configure Jenkins</button>
+            </div>
         </div>
         <div class="menu-spacer"></div>
-        <div class="menu-foot">Catalog</div>
+        <div class="menu-foot">Settings</div>
     </aside>
 
     <div class="splitter" id="splitLeft" role="separator" aria-orientation="vertical"
@@ -1750,7 +1711,11 @@
             </div>
         </div>
         <div id="chat">
-            <div th:if="${#lists.isEmpty(messages)}" class="empty" id="emptyHint">
+            <div th:if="${aiConfigured == false}" class="empty" id="aiSetupHint" style="color:var(--danger, #f87171);">
+                OpenAI key and model are not set up properly.<br>
+                Open <strong>Configuration - Configure AI key</strong>, save a valid key, then try again.
+            </div>
+            <div th:if="${aiConfigured != false and #lists.isEmpty(messages)}" class="empty" id="emptyHint">
                 Example: Deploy payment-app via Jenkins<br>
                 or Rollback payment-app to image 1.0.4
             </div>
@@ -1765,6 +1730,7 @@
             </div>
         </div>
         <form id="chatForm" method="post" th:action="@{/chat}">
+            <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
             <input type="hidden" id="messageHidden" name="message" value="">
             <div class="composer">
                 <textarea id="messageInput" rows="3"
@@ -1788,7 +1754,10 @@
 <div class="modal-backdrop" id="appModal" aria-hidden="true">
     <div class="modal-card app-modal-card" role="dialog" aria-labelledby="appModalTitle">
         <h3 id="appModalTitle">Add application</h3>
-        <p class="modal-hint" id="appModalHint">Saved into applications.json and available for deploy immediately.</p>
+        <p class="modal-hint" id="appModalHint">
+            Apply saves to applications.json and keeps this dialog open. Save applies and closes.
+            Selecting or copying field text will not close the dialog.
+        </p>
         <form id="appForm">
             <input type="hidden" name="originalName" id="appOriginalName" value="">
             <div class="modal-fields app-modal-fields" id="appModalFields">
@@ -1862,10 +1831,14 @@
                     <input name="namespace" placeholder="e.g. payment-app" autocomplete="off">
                 </label>
             </div>
-            <p class="modal-error" id="appFormError"></p>
-            <div class="modal-actions">
-                <button type="button" class="btn-cancel" id="appFormCancel">Cancel</button>
-                <button type="submit" class="btn-save" id="appFormSave">Save</button>
+            <p class="modal-error" id="appFormError" role="status"></p>
+            <div class="modal-actions jenkins-actions">
+                <div class="jenkins-actions-left"></div>
+                <div class="jenkins-actions-right">
+                    <button type="button" class="btn-cancel" id="appFormCancel">Cancel</button>
+                    <button type="button" class="btn-secondary" id="appFormApply">Apply</button>
+                    <button type="submit" class="btn-save" id="appFormSave">Save</button>
+                </div>
             </div>
         </form>
     </div>
@@ -1990,14 +1963,66 @@
     </div>
 </div>
 
+<div class="modal-backdrop" id="openaiSettingsModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-labelledby="openaiSettingsTitle" aria-modal="true">
+        <h3 id="openaiSettingsTitle">OpenAI API key</h3>
+        <p class="modal-hint">
+            Configure the OpenAI key used by the deploy agent. The key is encrypted at rest.
+            Test, Save to apply without restart, or Delete to clear. Leave blank to keep the current key.
+        </p>
+        <form id="openaiSettingsForm">
+            <div class="modal-fields">
+                <label>Model
+                    <input id="openaiModelInput" readonly tabindex="-1" value="gpt-4o-mini">
+                </label>
+                <label>API key
+                    <span class="field-hint" id="openaiKeyHint">Enter a new key, or leave blank to keep existing.</span>
+                    <input name="apiKey" id="openaiKeyInput" type="password"
+                           placeholder="sk-…" autocomplete="new-password">
+                </label>
+            </div>
+            <p class="modal-error" id="openaiSettingsError" role="status"></p>
+            <div class="modal-actions jenkins-actions">
+                <div class="jenkins-actions-left">
+                    <button type="button" class="btn-secondary" id="openaiSettingsTest">Test key</button>
+                    <button type="button" class="btn-danger" id="openaiSettingsDelete">Delete</button>
+                </div>
+                <div class="jenkins-actions-right">
+                    <button type="button" class="btn-cancel" id="openaiSettingsCancel">Cancel</button>
+                    <button type="submit" class="btn-save" id="openaiSettingsSave">Save</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script th:inline="javascript">
     const APP_CATALOG = /*[[${applications}]]*/ [];
+    window.__aiConfigured = /*[[${aiConfigured}]]*/ false;
 </script>
-<script>
+<script th:inline="none">
+    function readCookie(name) {
+        // Bracket access avoids Thymeleaf rewriting document.cookie
+        var raw = window['document']['cookie'] || '';
+        var parts = raw.split(';');
+        for (var i = 0; i < parts.length; i++) {
+            var p = parts[i].trim();
+            if (p.indexOf(name + '=') === 0) {
+                return decodeURIComponent(p.substring(name.length + 1));
+            }
+        }
+        return '';
+    }
+
     function csrfHeaders(extra) {
-        const headers = Object.assign({}, extra || {});
-        const tokenMeta = document.querySelector('meta[name="_csrf"]');
-        const headerMeta = document.querySelector('meta[name="_csrf_header"]');
+        var headers = Object.assign({ 'X-Requested-With': 'XMLHttpRequest' }, extra || {});
+        // Prefer cookie token (CookieCsrfTokenRepository -> XSRF-TOKEN / X-XSRF-TOKEN).
+        var cookieToken = readCookie('XSRF-TOKEN');
+        if (cookieToken) {
+            headers['X-XSRF-TOKEN'] = cookieToken;
+        }
+        var tokenMeta = document.querySelector('meta[name="_csrf"]');
+        var headerMeta = document.querySelector('meta[name="_csrf_header"]');
         if (tokenMeta && headerMeta && tokenMeta.content && headerMeta.content) {
             headers[headerMeta.content] = tokenMeta.content;
         }
@@ -2005,11 +2030,22 @@
     }
 
     function formatApiError(status, body) {
-        const msg = (body && (body.error || body.result)) || ('HTTP ' + status);
+        const msg = (body && (body.error || body.message || body.result)) || ('HTTP ' + status);
         if (status === 403 || String(msg).toLowerCase() === 'forbidden') {
             return 'Session expired (CSRF). Refresh the page, sign in again if needed, then retry.';
         }
+        if (status === 503) {
+            return (body && body.message) || 'OpenAI key and model are not set up properly. Configure AI key before triggering anything.';
+        }
         return msg;
+    }
+
+    function requireAiConfigured() {
+        if (window.__aiConfigured) return true;
+        appendAssistantNote('OpenAI key and model are not set up properly. Configure AI key before triggering Jenkins or chat.');
+        const aiBtn = document.getElementById('openaiSettingsBtn');
+        if (aiBtn) aiBtn.focus();
+        return false;
     }
 
     (function () {
@@ -2450,6 +2486,7 @@
         approveBtn.className = 'btn-approve';
         approveBtn.textContent = 'Approve';
         approveBtn.addEventListener('click', function () {
+            if (!requireAiConfigured()) return;
             const appName = selectedAppName();
             if (!appName) return;
             const status = healthByName[appName] || 'UNKNOWN';
@@ -2611,6 +2648,7 @@
         approveBtn.className = 'btn-approve';
         approveBtn.textContent = 'Approve';
         approveBtn.addEventListener('click', function () {
+            if (!requireAiConfigured()) return;
             const appName = selectedAppName();
             const imageVersion = (versionInput.value || '').trim();
             err.textContent = '';
@@ -2772,6 +2810,7 @@
         approveBtn.className = 'btn-approve';
         approveBtn.textContent = 'Approve rollback';
         approveBtn.addEventListener('click', async function () {
+            if (!requireAiConfigured()) return;
             const appName = selectedAppName();
             const payload = {
                 cluster: (clusterInput.value || '').trim(),
@@ -2898,6 +2937,14 @@
             return;
         }
 
+        if (!window.__aiConfigured) {
+            e.preventDefault();
+            appendAssistantNote('OpenAI key and model are not set up properly. Open Configuration - Configure AI key, save a valid key, then retry.');
+            const aiBtn = document.getElementById('openaiSettingsBtn');
+            if (aiBtn) aiBtn.focus();
+            return;
+        }
+
         // Rollback requests open in-chat confirm (params + Approve)
         if (isRollbackIntent(text) && !rollbackApprovalGranted) {
             e.preventDefault();
@@ -3016,11 +3063,12 @@
         const hintEl = document.getElementById('appModalHint');
         const errorEl = document.getElementById('appFormError');
         const saveBtn = document.getElementById('appFormSave');
+        const applyBtn = document.getElementById('appFormApply');
         const cancelBtn = document.getElementById('appFormCancel');
         const originalNameEl = document.getElementById('appOriginalName');
+        const actionButtons = [saveBtn, applyBtn, cancelBtn].filter(Boolean);
         const openButtons = [
-            document.getElementById('addAppBtn'),
-            document.getElementById('addAppBtnRail')
+            document.getElementById('addAppBtn')
         ].filter(Boolean);
 
         const phaseSelect = document.getElementById('appPhase');
@@ -3135,20 +3183,17 @@
             syncPhaseUi();
             syncExposureUi();
             if (titleEl) titleEl.textContent = 'Add application';
-            if (hintEl) hintEl.textContent = 'Saved into applications.json. Build (CI) uses common-build-job (APPLICATION + IMAGE_VERSION).';
-            if (saveBtn) saveBtn.textContent = 'Save';
-            if (errorEl) {
-                errorEl.textContent = '';
-                errorEl.classList.remove('visible');
+            if (hintEl) {
+                hintEl.textContent = 'Apply saves to applications.json and keeps this dialog open. Save applies and closes.';
             }
+            if (saveBtn) saveBtn.textContent = 'Save';
+            if (applyBtn) applyBtn.textContent = 'Apply';
+            clearAppFormStatus();
             setBackgroundInert(true);
             modal.classList.add('open');
             modal.setAttribute('aria-hidden', 'false');
             const first = form.querySelector('input[name="name"]');
-            if (first) {
-                first.focus();
-                first.select();
-            }
+            if (first) first.focus();
         }
 
         function openEditModal(appName) {
@@ -3173,19 +3218,39 @@
             syncPhaseUi();
             syncExposureUi();
             if (titleEl) titleEl.textContent = 'Edit application';
-            if (hintEl) hintEl.textContent = 'Updates applications.json immediately.';
-            if (saveBtn) saveBtn.textContent = 'Update';
-            if (errorEl) {
-                errorEl.textContent = '';
-                errorEl.classList.remove('visible');
+            if (hintEl) {
+                hintEl.textContent = 'Apply saves to applications.json and keeps this dialog open. Save applies and closes.';
             }
+            if (saveBtn) saveBtn.textContent = 'Save';
+            if (applyBtn) applyBtn.textContent = 'Apply';
+            clearAppFormStatus();
             setBackgroundInert(true);
             modal.classList.add('open');
             modal.setAttribute('aria-hidden', 'false');
             const first = form.querySelector('input[name="name"]');
-            if (first) {
-                first.focus();
-                first.select();
+            if (first) first.focus();
+        }
+
+        function clearAppFormStatus() {
+            if (!errorEl) return;
+            errorEl.textContent = '';
+            errorEl.classList.remove('visible', 'success');
+        }
+
+        function showAppFormStatus(message, isSuccess) {
+            if (!errorEl) return;
+            errorEl.textContent = message || '';
+            errorEl.classList.toggle('success', !!isSuccess);
+            errorEl.classList.add('visible');
+        }
+
+        function setAppFormBusy(busy, which) {
+            actionButtons.forEach(function (btn) { btn.disabled = !!busy; });
+            if (applyBtn && busy && which === 'apply') applyBtn.textContent = 'Applying…';
+            if (saveBtn && busy && which === 'save') saveBtn.textContent = 'Saving…';
+            if (!busy) {
+                if (applyBtn) applyBtn.textContent = 'Apply';
+                if (saveBtn) saveBtn.textContent = 'Save';
             }
         }
 
@@ -3220,10 +3285,10 @@
             btn.addEventListener('click', openAddModal);
         });
         if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+        // Stay open on backdrop click / text selection — only Cancel or Save closes.
         if (modal) {
-            modal.addEventListener('click', function (e) {
-                if (e.target === modal) closeModal();
-            });
+            modal.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+            modal.addEventListener('click', function (e) { e.stopPropagation(); });
         }
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && modal && modal.classList.contains('open')) {
@@ -3231,110 +3296,114 @@
             }
         });
 
+        async function persistApplication(closeAfter) {
+            clearAppFormStatus();
+            const data = Object.fromEntries(new FormData(form).entries());
+            const originalName = (data.originalName || '').trim();
+            const phase = (data.phase || 'deploy').trim();
+            const isBuild = phase === 'build';
+            function optionalPort(raw) {
+                const s = (raw == null ? '' : String(raw)).trim();
+                if (!s) return null;
+                const n = Number(s);
+                if (!Number.isInteger(n) || n < 1 || n > 65535) {
+                    throw new Error('Ports must be integers between 1 and 65535');
+                }
+                return n;
+            }
+            let containerPort = null;
+            let servicePort = null;
+            if (!isBuild) {
+                containerPort = optionalPort(data.containerPort);
+                servicePort = optionalPort(data.servicePort);
+                if (!(data.healthUrl || '').trim()) {
+                    throw new Error('Health URL is required for Deploy (CD) entries.');
+                }
+            }
+            if (!(data.jenkinsApplication || '').trim()) {
+                throw new Error('Jenkins APPLICATION is required (payment-app, order-app, or customer-portal-api).');
+            }
+            if (isBuild) {
+                const imageVersion = (data.imageVersion || '').trim() || '1.0.1';
+                if (!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(imageVersion)) {
+                    throw new Error('IMAGE_VERSION must look like 1.0.1');
+                }
+            }
+            const payload = isBuild
+                ? {
+                    name: (data.name || '').trim(),
+                    phase: 'build',
+                    jobType: (data.jobType || 'jenkins').trim(),
+                    jenkinsJob: (data.jenkinsJob || 'common-build-job').trim(),
+                    jenkinsApplication: (data.jenkinsApplication || '').trim(),
+                    imageVersion: ((data.imageVersion || '').trim() || '1.0.1'),
+                    description: (data.description || '').trim()
+                }
+                : {
+                    name: (data.name || '').trim(),
+                    phase: 'deploy',
+                    jobType: (data.jobType || 'jenkins').trim(),
+                    exposure: (data.exposure || 'external').trim(),
+                    jenkinsJob: (data.jenkinsJob || '').trim(),
+                    jenkinsApplication: (data.jenkinsApplication || '').trim(),
+                    containerPort: containerPort,
+                    servicePort: servicePort,
+                    description: (data.description || '').trim(),
+                    healthUrl: (data.healthUrl || '').trim(),
+                    cluster: (data.cluster || '').trim(),
+                    namespace: (data.namespace || '').trim()
+                };
+            if (!payload.name) {
+                throw new Error('Name is required');
+            }
+
+            const url = originalName
+                ? '/api/applications/' + encodeURIComponent(originalName)
+                : '/api/applications';
+            const res = await fetch(url, {
+                method: originalName ? 'PUT' : 'POST',
+                credentials: 'same-origin',
+                headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify(payload)
+            });
+            const body = await res.json().catch(function () { return {}; });
+            if (!res.ok) {
+                throw new Error(formatApiError(res.status, body));
+            }
+
+            // Keep editing the same record after rename/create.
+            if (originalNameEl) originalNameEl.value = payload.name;
+            if (titleEl) titleEl.textContent = 'Edit application';
+
+            if (closeAfter) {
+                window.location.reload();
+                return;
+            }
+            showAppFormStatus('Applied. Dialog stayed open — click Save when finished.', true);
+        }
+
+        if (applyBtn) {
+            applyBtn.addEventListener('click', async function () {
+                setAppFormBusy(true, 'apply');
+                try {
+                    await persistApplication(false);
+                } catch (err) {
+                    showAppFormStatus(err.message || String(err), false);
+                } finally {
+                    setAppFormBusy(false);
+                }
+            });
+        }
+
         if (form) {
             form.addEventListener('submit', async function (e) {
                 e.preventDefault();
-                if (errorEl) {
-                    errorEl.textContent = '';
-                    errorEl.classList.remove('visible');
-                }
-                const data = Object.fromEntries(new FormData(form).entries());
-                const originalName = (data.originalName || '').trim();
-                const phase = (data.phase || 'deploy').trim();
-                const isBuild = phase === 'build';
-                function optionalPort(raw) {
-                    const s = (raw == null ? '' : String(raw)).trim();
-                    if (!s) return null;
-                    const n = Number(s);
-                    if (!Number.isInteger(n) || n < 1 || n > 65535) {
-                        throw new Error('Ports must be integers between 1 and 65535');
-                    }
-                    return n;
-                }
-                let containerPort = null;
-                let servicePort = null;
-                if (!isBuild) {
-                    try {
-                        containerPort = optionalPort(data.containerPort);
-                        servicePort = optionalPort(data.servicePort);
-                    } catch (portErr) {
-                        if (errorEl) {
-                            errorEl.textContent = portErr.message || String(portErr);
-                            errorEl.classList.add('visible');
-                        }
-                        return;
-                    }
-                    if (!(data.healthUrl || '').trim()) {
-                        if (errorEl) {
-                            errorEl.textContent = 'Health URL is required for Deploy (CD) entries.';
-                            errorEl.classList.add('visible');
-                        }
-                        return;
-                    }
-                }
-                if (!(data.jenkinsApplication || '').trim()) {
-                    if (errorEl) {
-                        errorEl.textContent = 'Jenkins APPLICATION is required (payment-app, order-app, or customer-portal-api).';
-                        errorEl.classList.add('visible');
-                    }
-                    return;
-                }
-                if (isBuild) {
-                    const imageVersion = (data.imageVersion || '').trim() || '1.0.1';
-                    if (!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(imageVersion)) {
-                        if (errorEl) {
-                            errorEl.textContent = 'IMAGE_VERSION must look like 1.0.1';
-                            errorEl.classList.add('visible');
-                        }
-                        return;
-                    }
-                }
-                const payload = isBuild
-                    ? {
-                        name: (data.name || '').trim(),
-                        phase: 'build',
-                        jobType: (data.jobType || 'jenkins').trim(),
-                        jenkinsJob: (data.jenkinsJob || 'common-build-job').trim(),
-                        jenkinsApplication: (data.jenkinsApplication || '').trim(),
-                        imageVersion: ((data.imageVersion || '').trim() || '1.0.1'),
-                        description: (data.description || '').trim()
-                    }
-                    : {
-                        name: (data.name || '').trim(),
-                        phase: 'deploy',
-                        jobType: (data.jobType || 'jenkins').trim(),
-                        exposure: (data.exposure || 'external').trim(),
-                        jenkinsJob: (data.jenkinsJob || '').trim(),
-                        jenkinsApplication: (data.jenkinsApplication || '').trim(),
-                        containerPort: containerPort,
-                        servicePort: servicePort,
-                        description: (data.description || '').trim(),
-                        healthUrl: (data.healthUrl || '').trim(),
-                        cluster: (data.cluster || '').trim(),
-                        namespace: (data.namespace || '').trim()
-                    };
-                if (saveBtn) saveBtn.disabled = true;
+                setAppFormBusy(true, 'save');
                 try {
-                    const url = originalName
-                        ? '/api/applications/' + encodeURIComponent(originalName)
-                        : '/api/applications';
-                    const res = await fetch(url, {
-                        method: originalName ? 'PUT' : 'POST',
-                        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
-                        body: JSON.stringify(payload)
-                    });
-                    const body = await res.json().catch(function () { return {}; });
-                    if (!res.ok) {
-                        throw new Error(body.error || ('HTTP ' + res.status));
-                    }
-                    window.location.reload();
+                    await persistApplication(true);
                 } catch (err) {
-                    if (errorEl) {
-                        errorEl.textContent = err.message || String(err);
-                        errorEl.classList.add('visible');
-                    }
-                } finally {
-                    if (saveBtn) saveBtn.disabled = false;
+                    showAppFormStatus(err.message || String(err), false);
+                    setAppFormBusy(false);
                 }
             });
         }
@@ -3496,6 +3565,13 @@
             if (rollbackForm) {
                 rollbackForm.addEventListener('submit', async function (e) {
                     e.preventDefault();
+                    if (!window.__aiConfigured) {
+                        if (rollbackError) {
+                            rollbackError.textContent = 'OpenAI key and model are not set up properly. Configure AI key first.';
+                            rollbackError.classList.add('visible');
+                        }
+                        return;
+                    }
                     if (rollbackError) {
                         rollbackError.textContent = '';
                         rollbackError.classList.remove('visible');
@@ -3778,6 +3854,237 @@
         }
     })();
 
+    (function openaiSettingsUi() {
+        const modal = document.getElementById('openaiSettingsModal');
+        const form = document.getElementById('openaiSettingsForm');
+        const openBtn = document.getElementById('openaiSettingsBtn');
+        const cancelBtn = document.getElementById('openaiSettingsCancel');
+        const testBtn = document.getElementById('openaiSettingsTest');
+        const deleteBtn = document.getElementById('openaiSettingsDelete');
+        const saveBtn = document.getElementById('openaiSettingsSave');
+        const errorEl = document.getElementById('openaiSettingsError');
+        const keyInput = document.getElementById('openaiKeyInput');
+        const keyHint = document.getElementById('openaiKeyHint');
+        const modelInput = document.getElementById('openaiModelInput');
+        const pill = document.getElementById('openaiStatusPill');
+        const actionButtons = [testBtn, deleteBtn, saveBtn, cancelBtn].filter(Boolean);
+        window.__aiConfigured = false;
+
+        function applyPill(data) {
+            const configured = !!(data && data.configured);
+            window.__aiConfigured = configured;
+            if (!pill) return;
+            if (configured) {
+                pill.classList.remove('offline');
+                pill.textContent = 'AI ready';
+                pill.title = 'Model: ' + ((data && data.model) || 'gpt-4o-mini');
+                const setupHint = document.getElementById('aiSetupHint');
+                if (setupHint) setupHint.style.display = 'none';
+            } else {
+                pill.classList.add('offline');
+                pill.textContent = 'Key / model not set up';
+                pill.title = 'OpenAI key and model are not set up properly';
+                const setupHint = document.getElementById('aiSetupHint');
+                if (setupHint) setupHint.style.display = '';
+            }
+        }
+
+        function clearStatus() {
+            if (!errorEl) return;
+            errorEl.textContent = '';
+            errorEl.classList.remove('visible', 'success');
+        }
+
+        function showStatus(message, isSuccess) {
+            if (!errorEl) return;
+            errorEl.textContent = message || '';
+            errorEl.classList.toggle('success', !!isSuccess);
+            errorEl.classList.add('visible');
+        }
+
+        function setBusy(busy, busyLabel) {
+            actionButtons.forEach(function (btn) { btn.disabled = !!busy; });
+            if (testBtn && busy && busyLabel === 'test') testBtn.textContent = 'Testing…';
+            if (saveBtn && busy && busyLabel === 'save') saveBtn.textContent = 'Saving…';
+            if (deleteBtn && busy && busyLabel === 'delete') deleteBtn.textContent = 'Deleting…';
+            if (!busy) {
+                if (testBtn) testBtn.textContent = 'Test key';
+                if (saveBtn) saveBtn.textContent = 'Save';
+                if (deleteBtn) deleteBtn.textContent = 'Delete';
+            }
+        }
+
+        function requireCsrf() {
+            const csrfMeta = document.querySelector('meta[name="_csrf"]');
+            const cookieToken = readCookie('XSRF-TOKEN');
+            if ((!csrfMeta || !csrfMeta.content) && !cookieToken) {
+                throw new Error('CSRF token missing — refresh the page and try again.');
+            }
+        }
+
+        async function loadSettings() {
+            const res = await fetch('/api/settings/openai', { cache: 'no-store', credentials: 'same-origin' });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        }
+
+        async function persistSettings() {
+            requireCsrf();
+            const res = await fetch('/api/settings/openai', {
+                method: 'PUT',
+                credentials: 'same-origin',
+                headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ apiKey: (keyInput && keyInput.value || '').trim() })
+            });
+            const body = await res.json().catch(function () { return {}; });
+            if (!res.ok) {
+                throw new Error(formatApiError(res.status, body));
+            }
+            if (keyHint && body.apiKeySet) {
+                keyHint.textContent = 'Key on file: ' + (body.apiKeyMasked || '••••') + ' — leave blank to keep.';
+            }
+            if (keyInput) keyInput.value = '';
+            if (modelInput && body.model) modelInput.value = body.model;
+            applyPill(body);
+            return body;
+        }
+
+        async function testKey() {
+            requireCsrf();
+            const res = await fetch('/api/settings/openai/test', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ apiKey: (keyInput && keyInput.value || '').trim() })
+            });
+            const body = await res.json().catch(function () { return {}; });
+            if (body.ok) {
+                return body.message || 'Connected';
+            }
+            throw new Error(formatApiError(res.status, body));
+        }
+
+        async function deleteKey() {
+            requireCsrf();
+            const res = await fetch('/api/settings/openai', {
+                method: 'DELETE',
+                credentials: 'same-origin',
+                headers: csrfHeaders({ 'Content-Type': 'application/json' })
+            });
+            const body = await res.json().catch(function () { return {}; });
+            if (!res.ok) {
+                throw new Error(formatApiError(res.status, body));
+            }
+            if (keyHint) keyHint.textContent = 'Enter an OpenAI API key.';
+            if (keyInput) keyInput.value = '';
+            applyPill(body);
+            return body;
+        }
+
+        function openModal(data) {
+            if (!modal || !form) return;
+            form.reset();
+            if (modelInput) modelInput.value = (data && data.model) || 'gpt-4o-mini';
+            if (keyInput) keyInput.value = '';
+            if (keyHint) {
+                keyHint.textContent = (data && data.apiKeySet)
+                    ? ('Key on file: ' + (data.apiKeyMasked || '••••') + ' — leave blank to keep.')
+                    : 'Enter an OpenAI API key.';
+            }
+            clearStatus();
+            if (typeof setBackgroundInert === 'function') setBackgroundInert(true);
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            if (keyInput) keyInput.focus();
+        }
+
+        function closeModal() {
+            if (!modal) return;
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+            if (typeof setBackgroundInert === 'function') setBackgroundInert(false);
+        }
+
+        async function refreshStatus() {
+            try {
+                const data = await loadSettings();
+                applyPill(data);
+                return data;
+            } catch (e) {
+                applyPill(null);
+                return null;
+            }
+        }
+
+        if (openBtn) {
+            openBtn.addEventListener('click', async function () {
+                try {
+                    const data = await loadSettings();
+                    openModal(data || {});
+                } catch (err) {
+                    openModal({});
+                    showStatus('Could not load settings: ' + (err.message || err), false);
+                }
+            });
+        }
+        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+        if (modal) {
+            modal.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+            modal.addEventListener('click', function (e) { e.stopPropagation(); });
+        }
+
+        if (testBtn) {
+            testBtn.addEventListener('click', async function () {
+                clearStatus();
+                setBusy(true, 'test');
+                try {
+                    showStatus(await testKey(), true);
+                } catch (err) {
+                    showStatus(err.message || String(err), false);
+                } finally {
+                    setBusy(false);
+                }
+            });
+        }
+
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async function () {
+                if (!window.confirm('Delete the stored OpenAI API key? Chat will return HTTP 503 until a key is saved again.')) {
+                    return;
+                }
+                clearStatus();
+                setBusy(true, 'delete');
+                try {
+                    await deleteKey();
+                    showStatus('API key deleted. AI chat is unavailable until you save a new key.', true);
+                } catch (err) {
+                    showStatus(err.message || String(err), false);
+                } finally {
+                    setBusy(false);
+                }
+            });
+        }
+
+        if (form) {
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                clearStatus();
+                setBusy(true, 'save');
+                try {
+                    await persistSettings();
+                    showStatus('Saved. Chat client refreshed — no restart needed.', true);
+                    closeModal();
+                } catch (err) {
+                    showStatus(err.message || String(err), false);
+                } finally {
+                    setBusy(false);
+                }
+            });
+        }
+
+        refreshStatus();
+    })();
+
     (function jenkinsSettingsUi() {
         const modal = document.getElementById('jenkinsSettingsModal');
         const form = document.getElementById('jenkinsSettingsForm');
@@ -3842,13 +4149,14 @@
 
         function requireCsrf() {
             const csrfMeta = document.querySelector('meta[name="_csrf"]');
-            if (!csrfMeta || !csrfMeta.content) {
+            const cookieToken = readCookie('XSRF-TOKEN');
+            if ((!csrfMeta || !csrfMeta.content) && !cookieToken) {
                 throw new Error('CSRF token missing — refresh the page and try again.');
             }
         }
 
         async function loadSettings() {
-            const res = await fetch('/api/settings/jenkins', { cache: 'no-store' });
+            const res = await fetch('/api/settings/jenkins', { cache: 'no-store', credentials: 'same-origin' });
             if (!res.ok) throw new Error('HTTP ' + res.status);
             return res.json();
         }
@@ -3857,12 +4165,13 @@
             requireCsrf();
             const res = await fetch('/api/settings/jenkins', {
                 method: 'PUT',
+                credentials: 'same-origin',
                 headers: csrfHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(payloadFromForm())
             });
             const body = await res.json().catch(function () { return {}; });
             if (!res.ok) {
-                throw new Error(body.error || body.title || res.statusText || ('HTTP ' + res.status));
+                throw new Error(formatApiError(res.status, body));
             }
             if (tokenHint && body.tokenSet) {
                 tokenHint.textContent = 'Token on file: ' + (body.jenkinsTokenMasked || '••••') + ' — leave blank to keep.';
@@ -3876,6 +4185,7 @@
             requireCsrf();
             const res = await fetch('/api/settings/jenkins/test', {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: csrfHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(payloadFromForm())
             });
@@ -3883,7 +4193,7 @@
             if (body.ok) {
                 return body.message || 'Connected';
             }
-            throw new Error(body.message || body.error || body.title || res.statusText || ('HTTP ' + res.status));
+            throw new Error(formatApiError(res.status, body));
         }
 
         function openModal(data) {

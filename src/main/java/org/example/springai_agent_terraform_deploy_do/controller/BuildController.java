@@ -1,5 +1,6 @@
 package org.example.springai_agent_terraform_deploy_do.controller;
 
+import org.example.springai_agent_terraform_deploy_do.service.AiConfigurationGuard;
 import org.example.springai_agent_terraform_deploy_do.tools.DeployResultHolder;
 import org.example.springai_agent_terraform_deploy_do.tools.JenkinsBuildTool;
 import org.springframework.http.HttpStatus;
@@ -17,9 +18,12 @@ import java.util.Map;
 public class BuildController {
 
     private final JenkinsBuildTool jenkinsBuildTool;
+    private final AiConfigurationGuard aiConfigurationGuard;
 
-    public BuildController(JenkinsBuildTool jenkinsBuildTool) {
+    public BuildController(JenkinsBuildTool jenkinsBuildTool,
+                           AiConfigurationGuard aiConfigurationGuard) {
         this.jenkinsBuildTool = jenkinsBuildTool;
+        this.aiConfigurationGuard = aiConfigurationGuard;
     }
 
     public record BuildRequest(String applicationName, String imageVersion) {
@@ -27,6 +31,10 @@ public class BuildController {
 
     @PostMapping
     public ResponseEntity<?> build(@RequestBody BuildRequest request) {
+        var blocked = aiConfigurationGuard.rejectIfNotReady();
+        if (blocked.isPresent()) {
+            return blocked.get();
+        }
         try {
             if (request == null || request.applicationName() == null || request.applicationName().isBlank()) {
                 return ResponseEntity.badRequest().body(error("applicationName is required"));
